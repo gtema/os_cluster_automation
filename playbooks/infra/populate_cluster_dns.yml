@@ -1,0 +1,9 @@
+---
+- name: Register cluster instances in the DNS
+  hosts: localhost
+  environment:
+    OS_CLOUD: "{{ cloud_name }}"
+  tasks:
+    - include_role:
+        name: app_cluster
+        tasks_from: populate_dns

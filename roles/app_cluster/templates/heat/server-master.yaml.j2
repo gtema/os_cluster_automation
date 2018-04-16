@@ -1,0 +1,241 @@
+heat_template_version: 2016-10-14
+
+description: OpenShift cluster server
+
+parameters:
+
+  name:
+    type: string
+    label: Name
+    description: Name
+
+  group:
+    type: string
+    label: Host Group
+    description: The Primary Ansible Host Group
+    default: host
+
+  cluster_env:
+    type: string
+    label: Cluster environment
+    description: Environment of the cluster
+
+  cluster_id:
+    type: string
+    label: Cluster ID
+    description: Identifier of the cluster
+
+  type:
+    type: string
+    label: Type
+    description: Type master or node
+
+  subtype:
+    type: string
+    label: Sub-type
+    description: Sub-type compute or infra for nodes, default otherwise
+    default: default
+
+  key_name:
+    type: string
+    label: Key name
+    description: Key name of keypair
+
+  image:
+    type: string
+    label: Image
+    description: Name of the image
+
+  flavor:
+    type: string
+    label: Flavor
+    description: Name of the flavor
+
+  net:
+    type: string
+    label: Net ID
+    description: Net resource
+
+  net_name:
+    type: string
+    label: Net name
+    description: Net name
+
+  subnet:
+    type: string
+    label: Subnet ID
+    description: Subnet resource
+
+  secgrp:
+    type: comma_delimited_list
+    label: Security groups
+    description: Security group resources
+
+  availability_zone:
+    type: string
+    description: The Availability Zone to launch the instance.
+    default: eu-de-02
+
+  volume_size_host:
+    type: number
+    description: Sys storage size of each node
+    default: 6
+
+  volume_size_docker:
+    type: number
+    description: Size of the volume to be created.
+    default: 10
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+
+  volume_size_local:
+    type: number
+    description: Size of the volume to be created.
+    default: 10
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+
+  volume_size_etcd:
+    type: number
+    description: Size of the etcd volume to be created.
+    default: 10
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+
+  node_labels:
+    type: json
+    description: OpenShift Node Labels
+    default: {"region": "default" }
+
+  scheduler_hints:
+    type: json
+    description: Server scheduler hints.
+    default: {}
+
+  # lb_pool:
+  #   type: string
+  #   description: Load balancer pool to attach to
+  #
+  # lb_port:
+  #   type: number
+  #   description: Load balancer port
+
+outputs:
+
+  name:
+    description: Name of the server
+    value: { get_attr: [ srv, name ] }
+
+  private_ip:
+    description: Private IP of the server
+    value: { get_attr: [ srv, private_ip ] }
+
+  floating_ip:
+    description: Floating IP of the server
+    value: { get_attr: [ srv, floating_ip ] }
+
+resources:
+
+  srv:
+    type: server.yaml
+    properties:
+      name:      { get_param: name }
+      key_name:  { get_param: key_name }
+      image:     { get_param: image }
+      flavor:    { get_param: flavor }
+      # Due to the "feature" we can't pass file name as parameter,
+      # since it' content will not be attached then
+      user_data_file:
+        str_replace:
+          template:
+            get_file: user-data-master
+          params:
+            __name__: { get_param: name }
+      metadata:
+        group: { get_param: group }
+        cluster_env: { get_param: cluster_env }
+        cluster_id: { get_param: cluster_id }
+        host_type: { get_param: type }
+        host_subtype: { get_param: subtype }
+        node_labels: { get_param: node_labels }
+        scheduler_hints: { get_param: scheduler_hints }
+      net: { get_param: net }
+      net_name: { get_param: net_name }
+      subnet: { get_param: subnet }
+      secgrp: { get_param: secgrp }
+      availability_zone: { get_param: availability_zone }
+      block_device_mapping:
+        - {"device_name": "sda", "volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
+        - {"device_name": "sdb", "volume_id": { get_resource: cinder_volume_docker }, "boot_index": -1, "delete_on_termination": true}
+        - {"device_name": "sdc", "volume_id": { get_resource: cinder_volume_local }, "boot_index": -1, "delete_on_termination": true}
+        - {"device_name": "sdd", "volume_id": { get_resource: cinder_volume_etcd }, "boot_index": -1, "delete_on_termination": true}
+    depends_on:
+      - cinder_volume_os
+      - cinder_volume_local
+      - cinder_volume_docker
+      - cinder_volume_etcd
+
+  cinder_volume_os:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size_host }
+      availability_zone: { get_param: availability_zone }
+      image: { get_param: image }
+      metadata:
+        purpose: os storage
+
+  cinder_volume_local:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size_local }
+      availability_zone: { get_param: availability_zone }
+      metadata:
+        purpose: openshift_local_storage
+
+  cinder_volume_docker:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size_docker }
+      availability_zone: { get_param: availability_zone }
+      metadata:
+        purpose: openshift_docker_storage
+
+  cinder_volume_etcd:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size_etcd }
+      availability_zone: { get_param: availability_zone }
+      metadata:
+        purpose: openshift_etcd_storage
+
+  # volume_attachment_docker:
+  #   type: OS::Cinder::VolumeAttachment
+  #   properties:
+  #     volume_id: { get_resource: cinder_volume_docker }
+  #     instance_uuid: { get_attr: [srv, server] }
+  #     mountpoint: /dev/vdb
+  #
+  # volume_attachment_local:
+  #   type: OS::Cinder::VolumeAttachment
+  #   properties:
+  #     volume_id: { get_resource: cinder_volume_local }
+  #     instance_uuid: { get_attr: [srv, server] }
+  #     mountpoint: /dev/vdc
+  #
+  # volume_attachment_etcd:
+  #   type: OS::Cinder::VolumeAttachment
+  #   properties:
+  #     volume_id: { get_resource: cinder_volume_etcd }
+  #     instance_uuid: { get_attr: [srv, server] }
+  #     mountpoint: /dev/vdd
+
+  # lb_pool_member:
+  #   type: OS::Neutron::LBaaS::PoolMember
+  #   properties:
+  #     pool: { get_param: lb_pool }
+  #     address: { get_attr: [ srv, private_ip ] }
+  #     protocol_port: { get_param: lb_port }
+  #     subnet: { get_param: subnet }

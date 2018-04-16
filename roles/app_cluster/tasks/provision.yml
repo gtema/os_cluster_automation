@@ -1,0 +1,128 @@
+---
+- name: check for openstack client
+  command: openstack
+  register: openstack_cli_exists
+  ignore_errors: True
+
+# - name: Check if the stack exists
+#   command: openstack stack show {{ app_cluster_stack_name }}
+#   ignore_errors: True
+#   register: stack_check
+#   tags:
+#     - prepare_stack
+#   when: openstack_cli_exists is succeeded
+
+- name: create HOT stack template prefix
+  register: stack_template_pre
+  tempfile:
+    state: directory
+    prefix: otc-app-cluster
+  tags:
+    - prepare_stack
+
+- name: Create stack templates
+  include_tasks: generate_templates.yml
+  tags:
+    - prepare_stack
+  # when: (app_cluster_stack_state == 'present' and stack_check.rc != 0) or
+        # app_cluster_stack_update
+
+- name: validate the Heat template
+  command: openstack orchestration template validate -t {{ stack_template_path }}
+  register: template_validation_output
+  tags: prepare_stack
+  when: app_cluster_stack_state == 'present'
+
+- name: Check if the stack exists
+  command: openstack stack show {{ app_cluster_stack_name }}
+  ignore_errors: True
+  register: stack_exists
+  when: openstack_cli_exists is succeeded
+
+# - name: Dry-run the stack (create)
+#   command: openstack stack create --dry-run -t {{ stack_template_path }} {{ app_cluster_stack_name }}
+#   ignore_errors: True
+#   register: stack_create_dry_run_output
+#   when:
+#   - openstack_cli_exists is succeeded
+#   - stack_exists is failed
+#
+# - name: Dry-run the stack (update)
+#   command: openstack stack update --dry-run -t {{ stack_template_path }} {{ app_cluster_stack_name }}
+#   ignore_errors: True
+#   register: stack_update_dry_run_output
+#   when:
+#   - openstack_cli_exists is succeeded
+#   - stack_exists is succeeded
+#
+# - name: Show the dry run errors (create)
+#   debug: var=stack_create_dry_run_output.stderr
+#   when:
+#   - openstack_cli_exists is succeeded
+#   - stack_create_dry_run_output is failed
+#
+# - name: Show the dry run errors (update)
+#   debug: var=stack_update_dry_run_output.stderr
+#   when:
+#   - openstack_cli_exists is succeeded
+#   - stack_update_dry_run_output is failed
+
+- name: Create the Heat Stack
+  os_stack:
+    name: "{{ app_cluster_stack_name }}"
+    template: "{{ stack_template_path }}"
+    state: present
+    parameters:
+      cluster_name: "{{ app_cluster_name }}"
+      cluster_public_domain: "{{ app_cluster_public_domain }}"
+      cloud_network: "{{ network_name }}"
+      router_name: "{{ router_name }}"
+      dns_nameservers: "{{ app_cluster_dns_nameservers }}"
+      subnet_cidr: "{{ app_cluster_subnet_cidr }}"
+      image_name: "{{ app_cluster_node_image }}"
+      node_flavor: "{{ app_cluster_node_flavor }}"
+      ssh_key_name: "{{ ssh_key_name }}"
+      count_compute: "{{ app_cluster_compute_nodes }}"
+      count_infra: "{{ app_cluster_infra_nodes }}"
+      count_master: "{{ app_cluster_master_nodes }}"
+      volume_size_host: "{{ app_cluster_volume_size_host }}"
+      volume_size_local: "{{ app_cluster_volume_size_local }}"
+      volume_size_docker: "{{ app_cluster_volume_size_docker }}"
+      volume_size_etcd: "{{ app_cluster_volume_size_etcd }}"
+      volume_size_registry: "{{ app_cluster_volume_size_registry }}"
+      app_cluster_lb_name: "{{ app_cluster_lb_name }}"
+    wait: yes
+  register: stack_create
+  tags: execute_stack
+  # when: stack_check.rc != 0 or app_cluster_stack_update
+
+- name: get errors in stack creation, if any
+  command: openstack stack failures list {{ app_cluster_stack_name }}
+  register: stack_create_failures
+  when:
+  - openstack_cli_exists is succeeded
+  - stack_create is failed
+
+- name: show errors in stack creation, if any
+  debug: var=stack_create_failures
+  when:
+  - openstack_cli_exists is succeeded
+  - stack_create is failed
+
+- fail:
+    msg: Stack creation failed
+  when:
+  - stack_create is failed
+
+- name: Add the new nodes to the inventory
+  meta: refresh_inventory
+
+- name: debug inventory
+  debug:
+    var: hostvars
+
+- name: CleanUp
+  include_tasks: cleanup.yml
+  tags: [clean_stack_template]
+  when:
+  - app_cluster_stack_state == 'present'

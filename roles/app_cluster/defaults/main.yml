@@ -1,0 +1,19 @@
+---
+app_cluster_stack_state: present
+app_cluster_volume_size_docker: 15
+app_cluster_volume_size_local: 15
+app_cluster_volume_size_etcd: 15
+app_cluster_volume_size_registry: 15
+app_cluster_volume_size_host: 6
+app_cluster_master_nodes: 1
+app_cluster_infra_nodes: 2
+app_cluster_compute_nodes: 2
+
+app_cluster_prefix: openshift
+app_cluster_name: ""
+app_cluster_public_domain: ""
+
+app_cluster_private_hostname_suffix: ""
+app_cluster_public_hostname_suffix: ""
+app_cluster_app_subdomain: "apps"
+app_cluster_full_dns_domain: "{{ (app_cluster_prefix|trim == '') | ternary(app_cluster_public_domain, app_cluster_prefix + '.' + app_cluster_public_domain) }}"

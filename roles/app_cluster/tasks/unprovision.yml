@@ -1,0 +1,6 @@
+---
+- name: Destroy the Heat Stack
+  ignore_errors: True
+  os_stack:
+    name: "{{ app_cluster_stack_name }}"
+    state: absent

@@ -1,0 +1,12 @@
+#cloud-config
+
+fqdn: {{ bastion_server_fqdn }}
+
+packages:
+  - mc
+  - ansible
+
+growpart:
+mode: auto
+devices: ['/']
+ignore_growroot_disabled: false

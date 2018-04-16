@@ -1,0 +1,127 @@
+---
+heat_template_version: 2016-10-14
+
+description:
+  A Kubernetes/Openshift security groups
+
+parameters:
+
+  cluster_name:
+    type: string
+    description: >
+      Cluster name (used in resource names)
+    default: oc.example.com
+
+resources:
+  common-secgrp:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name:
+        str_replace:
+          template: cluster_id-common-secgrp
+          params:
+            cluster_id: { get_param: cluster_name }
+      description:
+        str_replace:
+          template: Basic icmp security group for cluster_id OpenShift cluster
+          params:
+            cluster_id: { get_param: cluster_name }
+      rules:
+        - {"remote_ip_prefix": "0.0.0.0/0", "direction": "ingress", "protocol": "icmp"}
+
+  master-secgrp:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name:
+        str_replace:
+          template: cluster_id-master-secgrp
+          params:
+            cluster_id: { get_param: cluster_name }
+      description:
+        str_replace:
+          template: Security group for cluster_id OpenShift cluster master
+          params:
+            cluster_id: { get_param: cluster_name }
+      rules:
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 8443, "port_range_max": 8443}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 8443, "port_range_max": 8443}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 8053, "port_range_max": 8053, "remote_group_id": {get_resource: node-secgrp}, "remote_mode": "remote_group_id"}
+        - {"protocol": "udp", "direction": "ingress", "port_range_min": 8053, "port_range_max": 8053, "remote_group_id": {get_resource: node-secgrp}, "remote_mode": "remote_group_id"}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 24224, "port_range_max": 24224, "remote_group_id": {get_resource: node-secgrp}, "remote_mode": "remote_group_id"}
+        - {"protocol": "udp", "direction": "ingress", "port_range_min": 24224, "port_range_max": 24224, "remote_group_id": {get_resource: node-secgrp}, "remote_mode": "remote_group_id"}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 2224, "port_range_max": 2224}
+        - {"protocol": "udp", "direction": "ingress", "port_range_min": 5404, "port_range_max": 5405}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 9090, "port_range_max": 9090}
+
+  etcd-secgrp:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name:
+        str_replace:
+          template: cluster_id-etcd-secgrp
+          params:
+            cluster_id: { get_param: cluster_name }
+      description:
+        str_replace:
+          template: Security group for cluster_id etcd cluster
+          params:
+            cluster_id: { get_param: cluster_name }
+      rules: [{"protocol": "tcp", "direction": "ingress", "port_range_min": 2379, "port_range_max": 2380, "remote_mode": "remote_group_id"}]
+
+  node-secgrp:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name:
+        str_replace:
+          template: cluster_id-node-secgrp
+          params:
+            cluster_id: { get_param: cluster_name }
+      description:
+        str_replace:
+          template: Security group for cluster_id OpenShift cluster nodes
+          params:
+            cluster_id: { get_param: cluster_name }
+      rules:
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 22, "port_range_max": 22, "remote_ip_prefix": "192.168.0.0/16"}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 10250, "port_range_max": 10250, "remote_mode": "remote_group_id"}
+        - {"protocol": "udp", "direction": "ingress", "port_range_min": 4789, "port_range_max": 4789, "remote_mode": "remote_group_id"}
+
+  infra-secgrp:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name:
+        str_replace:
+          template: cluster_id-infra-secgrp
+          params:
+            cluster_id: { get_param: cluster_name }
+      description:
+        str_replace:
+          template: Security group for cluster_id OpenShift infrastructure cluster nodes
+          params:
+            cluster_id: { get_param: cluster_name }
+      rules:
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 80, "port_range_max": 80}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 443, "port_range_max": 443}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 9200, "port_range_max": 9200}
+        - {"protocol": "tcp", "direction": "ingress", "port_range_min": 9300, "port_range_max": 9300}
+
+outputs:
+  common-secgrp:
+    description: Common security group
+    value: { get_resource: common-secgrp }
+
+  master-secgrp:
+    description: Master node security group
+    value: { get_resource: master-secgrp }
+
+  etcd-secgrp:
+    description: ETCD security group
+    value: { get_resource: etcd-secgrp }
+
+  node-secgrp:
+    description: App Node security group
+    value: { get_resource: node-secgrp }
+
+  infra-secgrp:
+    description: Infra-node (router) security group
+    value: { get_resource: infra-secgrp }

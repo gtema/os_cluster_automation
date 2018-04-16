@@ -1,0 +1,14 @@
+---
+- name: named slave zone configuration file(s)
+  template:
+    src: templates/bind/zones.conf-slave.j2
+    dest: /etc/named/zones.conf
+  notify:
+    - restart named
+
+- name: set zone update key
+  template:
+    src: templates/bind/update.key.j2
+    dest: /etc/named/update.key
+  notify:
+    - restart named

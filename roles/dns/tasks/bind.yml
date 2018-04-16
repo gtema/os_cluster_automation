@@ -1,0 +1,45 @@
+---
+- name: firewall daemon
+  package:
+    name: firewalld
+    state: installed
+
+- name: firewall python module
+  package:
+    name: python-firewall
+    state: installed
+
+- name: install bind utilities
+  package:
+    name: bind-utils
+    state: installed
+
+- name: install bind server
+  package:
+    name: bind
+    state: installed
+
+- name: firewall service
+  systemd:
+    name: firewalld
+    enabled: yes
+    state: started
+
+- name: dns service
+  systemd:
+    name: named
+    enabled: yes
+    state: started
+
+- name: dns port
+  firewalld:
+    zone: public
+    service: dns
+    state: enabled
+    permanent: yes
+    immediate: yes
+
+- name: named configuration file
+  template:
+    src: templates/bind/named.conf.j2
+    dest: /etc/named.conf

@@ -1,0 +1,9 @@
+---
+- name: Provision DNS infrastructure
+  hosts: localhost
+  environment:
+    OS_CLOUD: "{{ cloud_name }}"
+  tasks:
+    - include_role:
+        name: app_cluster
+        tasks_from: unprovision

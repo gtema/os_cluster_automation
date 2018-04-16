@@ -1,0 +1,41 @@
+---
+- name: "Find DNS master from inventory"
+  set_fact:
+    dns_master: "{{ dns_master | default() + hostvars[item]['ansible_host'] }}"
+  when:
+    - hostvars[item]['host_type'] is defined
+    - hostvars[item]['host_subtype'] is defined
+    - hostvars[item]['host_type'] == 'dns'
+    - hostvars[item]['host_subtype'] == 'master'
+  with_items: "{{ groups['dns'] }}"
+
+- name: "Output master"
+  debug:
+    msg: "DNS master IP address is {{dns_master}}"
+
+- fail:
+    msg: "Can not find dns_master in inventory"
+  when:
+  - dns_master is not defined
+
+- name: Generate DNS records
+  include_tasks: generate-dns.yml
+
+# - name: "Add DNS A records"
+#   nsupdate:
+#     key_name: "{{ item.0.key_name }}"
+#     key_secret: "{{ item.0.key_secret }}"
+#     key_algorithm: "{{ item.0.key_algorithm }}"
+#     server: "{{ item.0.server }}"
+#     zone: "{{ item.0.zone }}"
+#     record: "{{ item.1.hostname }}"
+#     value: "{{ item.1.ip }}"
+#     type: "{{ item.1.type }}"
+#     state: present
+#   with_subelements:
+#     - "{{ openshift_openstack_dns_records | default([]) }}"
+#     - entries
+#   register: nsupdate_add_result
+#   until: nsupdate_add_result is succeeded
+#   retries: 10
+#   delay: 1

@@ -1,0 +1,6 @@
+---
+dns_server_flavor: m1.small
+dns_slave_count: 3
+slave_server_group_policies: ['anti-affinity']
+dns_stack_state: present
+contact: admin@ocp3.example.com

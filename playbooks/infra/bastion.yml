@@ -1,0 +1,24 @@
+---
+- name: Create Bastion
+  hosts: localhost
+  environment:
+    OS_CLOUD: "{{ cloud_name }}"
+  tasks:
+    - include_role:
+        name: bastion
+        tasks_from: provision
+
+- name: Prepare SSHD
+  hosts: bastions
+  become: true
+  tasks:
+    - include_role:
+        name: bastion
+        tasks_from: sshd.yml
+
+- name: message
+  hosts: localhost
+  tasks:
+    - name: print notice
+      debug:
+        msg: "Configure your SSH to have bastion {{ bastions[0].host_name }} be used as a proxy to other subnets"

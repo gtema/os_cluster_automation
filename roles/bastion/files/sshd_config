@@ -1,0 +1,30 @@
+Protocol 2
+SyslogFacility AUTH
+PermitRootLogin forced-commands-only
+PasswordAuthentication no
+UsePAM yes
+X11Forwarding yes
+#UseDNS no
+Subsystem       sftp    /usr/libexec/openssh/sftp-server
+AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES
+AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT
+AcceptEnv LC_IDENTIFICATION LC_ALL
+GSSAPIAuthentication no
+GSSAPICleanupCredentials yes
+ChallengeResponseAuthentication no
+Ciphers aes256-ctr,aes192-ctr,aes128-ctr
+KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
+# Required to enable tunnels
+AllowTcpForwarding yes
+GatewayPorts no
+X11UseLocalhost yes
+AllowAgentForwarding yes
+PermitTunnel no
+LogLevel VERBOSE
+RSAAuthentication yes
+PubkeyAuthentication yes
+PermitEmptyPasswords no
+RhostsRSAAuthentication no
+HostbasedAuthentication no
+IgnoreRhosts yes
+PubkeyAcceptedKeyTypes=+ssh-dss

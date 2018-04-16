@@ -1,0 +1,31 @@
+#cloud-config
+cloud_config_modules:
+- disk_setup
+- mounts
+
+fqdn: __name__
+
+write_files:
+  - path: "/etc/sysconfig/docker-storage-setup"
+    permissions: "0644"
+    owner: "root"
+    content: |
+      DEVS='/dev/vdb'
+      VG=docker_vol
+      DATA_SIZE=95%VG
+      STORAGE_DRIVER=overlay2
+      CONTAINER_ROOT_LV_NAME=dockerlv
+      CONTAINER_ROOT_LV_MOUNT_PATH=/var/lib/docker
+      CONTAINER_ROOT_LV_SIZE=100%FREE
+
+fs_setup:
+- label: emptydir
+  filesystem: xfs
+  device: /dev/vdc
+  partition: auto
+
+runcmd:
+- mkdir -p /var/lib/origin/openshift.local.volumes
+
+mounts:
+- [ /dev/vdc, /var/lib/origin/openshift.local.volumes, xfs, "defaults,gquota" ]

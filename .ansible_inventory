@@ -1,0 +1,210 @@
+{
+    "OSEv3": {
+        "hosts": [
+            "infra-node-0.internal.oc.goncharov.org", 
+            "master-0.internal.oc.goncharov.org", 
+            "infra-node-1.internal.oc.goncharov.org", 
+            "app-node-1.internal.oc.goncharov.org", 
+            "app-node-0.internal.oc.goncharov.org"
+        ]
+    }, 
+    "_meta": {
+        "hostvars": {
+            "app-node-0.internal.oc.goncharov.org": {
+                "ansible_host": "192.168.99.222", 
+                "ansible_hostname": "app-node-0.internal.oc.goncharov.org", 
+                "docker_storage_mountpoints": "/dev/vdc /dev/vdb", 
+                "host_subtype": "app", 
+                "host_type": "node", 
+                "openshift_hostname": "192.168.99.222", 
+                "openshift_ip": "192.168.99.222", 
+                "openshift_node_labels": {
+                    "region": "primary"
+                }, 
+                "openshift_public_hostname": "app-node-0.internal.oc.goncharov.org", 
+                "openshift_public_ip": "", 
+                "private_v4": "192.168.99.222", 
+                "public_v4": ""
+            }, 
+            "app-node-1.internal.oc.goncharov.org": {
+                "ansible_host": "192.168.99.60", 
+                "ansible_hostname": "app-node-1.internal.oc.goncharov.org", 
+                "docker_storage_mountpoints": "/dev/vdc /dev/vdb", 
+                "host_subtype": "app", 
+                "host_type": "node", 
+                "openshift_hostname": "192.168.99.60", 
+                "openshift_ip": "192.168.99.60", 
+                "openshift_node_labels": {
+                    "region": "primary"
+                }, 
+                "openshift_public_hostname": "app-node-1.internal.oc.goncharov.org", 
+                "openshift_public_ip": "", 
+                "private_v4": "192.168.99.60", 
+                "public_v4": ""
+            }, 
+            "bastion.goncharov.org": {
+                "ansible_host": "80.158.17.9", 
+                "ansible_hostname": "bastion.goncharov.org", 
+                "host_type": "bastion", 
+                "openshift_hostname": "192.168.110.233", 
+                "openshift_ip": "192.168.110.233", 
+                "openshift_public_hostname": "bastion.goncharov.org", 
+                "openshift_public_ip": "80.158.17.9", 
+                "private_v4": "192.168.110.233", 
+                "public_v4": "80.158.17.9"
+            }, 
+            "infra-node-0.internal.oc.goncharov.org": {
+                "ansible_host": "192.168.99.190", 
+                "ansible_hostname": "infra-node-0.internal.oc.goncharov.org", 
+                "docker_storage_mountpoints": "/dev/vdc /dev/vdb", 
+                "host_subtype": "infra", 
+                "host_type": "node", 
+                "openshift_hostname": "192.168.99.190", 
+                "openshift_ip": "192.168.99.190", 
+                "openshift_node_labels": {
+                    "region": "infra"
+                }, 
+                "openshift_public_hostname": "infra-node-0.internal.oc.goncharov.org", 
+                "openshift_public_ip": "", 
+                "private_v4": "192.168.99.190", 
+                "public_v4": ""
+            }, 
+            "infra-node-1.internal.oc.goncharov.org": {
+                "ansible_host": "192.168.99.125", 
+                "ansible_hostname": "infra-node-1.internal.oc.goncharov.org", 
+                "docker_storage_mountpoints": "/dev/vdc /dev/vdb", 
+                "host_subtype": "infra", 
+                "host_type": "node", 
+                "openshift_hostname": "192.168.99.125", 
+                "openshift_ip": "192.168.99.125", 
+                "openshift_node_labels": {
+                    "region": "infra"
+                }, 
+                "openshift_public_hostname": "infra-node-1.internal.oc.goncharov.org", 
+                "openshift_public_ip": "", 
+                "private_v4": "192.168.99.125", 
+                "public_v4": ""
+            }, 
+            "master-0.internal.oc.goncharov.org": {
+                "ansible_host": "192.168.99.17", 
+                "ansible_hostname": "master-0.internal.oc.goncharov.org", 
+                "docker_storage_mountpoints": "/dev/vdd /dev/vdb /dev/vdc", 
+                "host_subtype": "default", 
+                "host_type": "master", 
+                "openshift_hostname": "192.168.99.17", 
+                "openshift_ip": "192.168.99.17", 
+                "openshift_node_labels": {
+                    "region": "default"
+                }, 
+                "openshift_public_hostname": "master-0.internal.oc.goncharov.org", 
+                "openshift_public_ip": "", 
+                "private_v4": "192.168.99.17", 
+                "public_v4": ""
+            }, 
+            "ns-master.goncharov.org": {
+                "ansible_host": "192.168.178.207", 
+                "ansible_hostname": "ns-master.goncharov.org", 
+                "host_subtype": "master", 
+                "host_type": "dns", 
+                "openshift_hostname": "192.168.178.207", 
+                "openshift_ip": "192.168.178.207", 
+                "openshift_public_hostname": "ns-master.goncharov.org", 
+                "openshift_public_ip": "", 
+                "private_v4": "192.168.178.207", 
+                "public_v4": ""
+            }, 
+            "ns0.goncharov.org": {
+                "ansible_host": "192.168.178.24", 
+                "ansible_hostname": "ns0.goncharov.org", 
+                "host_subtype": "slave", 
+                "host_type": "dns", 
+                "openshift_hostname": "192.168.178.24", 
+                "openshift_ip": "192.168.178.24", 
+                "openshift_public_hostname": "ns0.goncharov.org", 
+                "openshift_public_ip": "", 
+                "private_v4": "192.168.178.24", 
+                "public_v4": ""
+            }
+        }
+    }, 
+    "app": {
+        "hosts": [
+            "app-node-0.internal.oc.goncharov.org", 
+            "app-node-1.internal.oc.goncharov.org"
+        ]
+    }, 
+    "bastion.goncharov.org": {
+        "hosts": [
+            "bastion.goncharov.org"
+        ]
+    }, 
+    "cluster_hosts": {
+        "hosts": [
+            "master-0.internal.oc.goncharov.org", 
+            "infra-node-0.internal.oc.goncharov.org", 
+            "infra-node-1.internal.oc.goncharov.org", 
+            "app-node-0.internal.oc.goncharov.org", 
+            "app-node-1.internal.oc.goncharov.org", 
+            "bastion.goncharov.org", 
+            "ns0.goncharov.org", 
+            "ns-master.goncharov.org"
+        ]
+    }, 
+    "dns": {
+        "hosts": [
+            "ns0.goncharov.org", 
+            "ns-master.goncharov.org"
+        ]
+    }, 
+    "dns.goncharov.org": {
+        "hosts": [
+            "ns0.goncharov.org", 
+            "ns-master.goncharov.org"
+        ]
+    }, 
+    "etcd": {
+        "hosts": [
+            "master-0.internal.oc.goncharov.org"
+        ]
+    }, 
+    "infra.oc.goncharov.org": {
+        "hosts": [
+            "infra-node-0.internal.oc.goncharov.org", 
+            "infra-node-1.internal.oc.goncharov.org"
+        ]
+    }, 
+    "infra_hosts": {
+        "hosts": [
+            "infra-node-0.internal.oc.goncharov.org", 
+            "infra-node-1.internal.oc.goncharov.org"
+        ]
+    }, 
+    "localhost": {
+        "ansible_connection": "local"
+    }, 
+    "masters": {
+        "hosts": [
+            "master-0.internal.oc.goncharov.org"
+        ]
+    }, 
+    "masters.oc.goncharov.org": {
+        "hosts": [
+            "master-0.internal.oc.goncharov.org"
+        ]
+    }, 
+    "nodes": {
+        "hosts": [
+            "infra-node-0.internal.oc.goncharov.org", 
+            "master-0.internal.oc.goncharov.org", 
+            "app-node-0.internal.oc.goncharov.org", 
+            "app-node-1.internal.oc.goncharov.org", 
+            "infra-node-1.internal.oc.goncharov.org"
+        ]
+    }, 
+    "nodes.oc.goncharov.org": {
+        "hosts": [
+            "app-node-0.internal.oc.goncharov.org", 
+            "app-node-1.internal.oc.goncharov.org"
+        ]
+    }
+}

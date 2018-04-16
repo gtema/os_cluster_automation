@@ -1,0 +1,66 @@
+---
+- name: set template paths
+  set_fact:
+    stack_template_path: "{{ stack_template_pre.path }}/stack.yaml"
+    sec_grp_template_path: "{{ stack_template_pre.path }}/sec_grp.yaml"
+    network_template_path: "{{ stack_template_pre.path }}/network.yaml"
+    server_template_path: "{{ stack_template_pre.path }}/server.yaml"
+    server_node_template_path: "{{ stack_template_pre.path }}/server-node.yaml"
+    server_infra_node_template_path: "{{ stack_template_pre.path }}/server-infra-node.yaml"
+    server_master_template_path: "{{ stack_template_pre.path }}/server-master.yaml"
+    server_lb_backend_template_path: "{{ stack_template_pre.path }}/server-lb_backend.yaml"
+    user_data_node_template_path: "{{ stack_template_pre.path }}/user-data-node"
+    user_data_master_template_path: "{{ stack_template_pre.path }}/user-data-master"
+
+- name: Print out the Heat template directory
+  debug: var=stack_template_pre
+
+- name: generate HOT stack template from jinja2 template
+  template:
+    src: heat/stack.yaml.j2
+    dest: "{{ stack_template_path }}"
+
+- name: generate HOT stack security groups template from jinja2 template
+  template:
+    src: heat/sec_grp.yaml.j2
+    dest: "{{ sec_grp_template_path }}"
+
+- name: generate HOT stack network template from jinja2 template
+  template:
+    src: heat/network.yaml.j2
+    dest: "{{ network_template_path }}"
+
+- name: generate HOT stack server template from jinja2 template
+  template:
+    src: heat/server.yaml.j2
+    dest: "{{ server_template_path }}"
+
+- name: generate HOT stack server node template from jinja2 template
+  template:
+    src: heat/server-node.yaml.j2
+    dest: "{{ server_node_template_path }}"
+
+- name: generate HOT stack server infra node template from jinja2 template
+  template:
+    src: heat/server-infra-node.yaml.j2
+    dest: "{{ server_infra_node_template_path }}"
+
+- name: generate HOT stack server master node template from jinja2 template
+  template:
+    src: heat/server-master.yaml.j2
+    dest: "{{ server_master_template_path }}"
+
+- name: generate HOT stack server master node template from jinja2 template
+  template:
+    src: heat/server-lb_backend.yaml.j2
+    dest: "{{ server_lb_backend_template_path }}"
+
+- name: generate HOT stack server node user-data template from jinja2 template
+  template:
+    src: user-data-node.j2
+    dest: "{{ user_data_node_template_path }}"
+
+- name: generate HOT stack server master node user-data template from jinja2 template
+  template:
+    src: user-data-master.j2
+    dest: "{{ user_data_master_template_path }}"

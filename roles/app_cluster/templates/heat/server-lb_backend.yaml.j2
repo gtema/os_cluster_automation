@@ -1,0 +1,35 @@
+heat_template_version: 2016-10-14
+
+description: Register servers in the LoadBalancer pool
+
+parameters:
+
+  server:
+    type: comma_delimited_list
+    description: List of server addresses to be added to the backend
+
+  index:
+    type: number
+
+  subnet:
+    type: string
+    label: Subnet ID
+    description: Subnet resource
+
+  lb_pool:
+    type: string
+    description: HTTP Router Load balancer pool to attach to
+
+  lb_port:
+    type: number
+    description: HTTP Router Load balancer port
+
+resources:
+
+  lb_pool_member:
+    type: OS::Neutron::LBaaS::PoolMember
+    properties:
+      pool: { get_param: lb_pool }
+      address: { get_attr: [ server, {get_param: index} ] }
+      protocol_port: { get_param: lb_port_http }
+      subnet: { get_param: subnet }

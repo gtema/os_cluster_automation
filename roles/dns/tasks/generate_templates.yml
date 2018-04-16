@@ -1,0 +1,42 @@
+---
+- name: set template paths
+  set_fact:
+    stack_template_path: "{{ stack_template_pre.path }}/stack.yaml"
+    master_template_path: "{{ stack_template_pre.path }}/master.yaml"
+    hosts_template_path: "{{ stack_template_pre.path }}/hosts.yaml"
+    all_slaves_template_path: "{{ stack_template_pre.path }}/all_slaves.yaml"
+    one_slave_template_path: "{{ stack_template_pre.path }}/one_slave.yaml"
+    network_template_path: "{{ stack_template_pre.path }}/network.yaml"
+
+- name: Print out the Heat template directory
+  debug: var=stack_template_pre
+
+- name: generate HOT stack template from jinja2 template
+  template:
+    src: heat/stack.yaml.j2
+    dest: "{{ stack_template_path }}"
+
+- name: generate HOT stack all_slaves template from jinja2 template
+  template:
+    src: heat/all_slaves.yaml.j2
+    dest: "{{ all_slaves_template_path }}"
+
+- name: generate HOT stack hosts template from jinja2 template
+  template:
+    src: heat/hosts.yaml.j2
+    dest: "{{ hosts_template_path }}"
+
+- name: generate HOT stack master template from jinja2 template
+  template:
+    src: heat/master.yaml.j2
+    dest: "{{ master_template_path }}"
+
+- name: generate HOT stack one_slave template from jinja2 template
+  template:
+    src: heat/one_slave.yaml.j2
+    dest: "{{ one_slave_template_path }}"
+
+- name: generate HOT stack network template from jinja2 template
+  template:
+    src: heat/network.yaml.j2
+    dest: "{{ network_template_path }}"
