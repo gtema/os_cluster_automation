@@ -115,14 +115,6 @@ parameters:
     description: Server scheduler hints.
     default: {}
 
-  # lb_pool:
-  #   type: string
-  #   description: Load balancer pool to attach to
-  #
-  # lb_port:
-  #   type: number
-  #   description: Load balancer port
-
 outputs:
 
   name:
@@ -162,22 +154,26 @@ resources:
         host_subtype: { get_param: subtype }
         node_labels: { get_param: node_labels }
         scheduler_hints: { get_param: scheduler_hints }
+        ansible_user: {{ app_server_ssh_user }}
       net: { get_param: net }
       net_name: { get_param: net_name }
       subnet: { get_param: subnet }
       secgrp: { get_param: secgrp }
       availability_zone: { get_param: availability_zone }
       block_device_mapping:
-        - {"device_name": "sda", "volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
-        - {"device_name": "sdb", "volume_id": { get_resource: cinder_volume_docker }, "boot_index": -1, "delete_on_termination": true}
-        - {"device_name": "sdc", "volume_id": { get_resource: cinder_volume_local }, "boot_index": -1, "delete_on_termination": true}
-        - {"device_name": "sdd", "volume_id": { get_resource: cinder_volume_etcd }, "boot_index": -1, "delete_on_termination": true}
+        - {"device_name": "vda", "volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
+        - {"device_name": "vdb", "volume_id": { get_resource: cinder_volume_docker }, "boot_index": -1, "delete_on_termination": true}
+        - {"device_name": "vdc", "volume_id": { get_resource: cinder_volume_local }, "boot_index": -1, "delete_on_termination": true}
+        - {"device_name": "vdd", "volume_id": { get_resource: cinder_volume_etcd }, "boot_index": -1, "delete_on_termination": true}
     depends_on:
       - cinder_volume_os
       - cinder_volume_local
       - cinder_volume_docker
       - cinder_volume_etcd
 
+  #######
+  # - server volumes
+  #######
   cinder_volume_os:
     type: OS::Cinder::Volume
     properties:
@@ -210,32 +206,3 @@ resources:
       availability_zone: { get_param: availability_zone }
       metadata:
         purpose: openshift_etcd_storage
-
-  # volume_attachment_docker:
-  #   type: OS::Cinder::VolumeAttachment
-  #   properties:
-  #     volume_id: { get_resource: cinder_volume_docker }
-  #     instance_uuid: { get_attr: [srv, server] }
-  #     mountpoint: /dev/vdb
-  #
-  # volume_attachment_local:
-  #   type: OS::Cinder::VolumeAttachment
-  #   properties:
-  #     volume_id: { get_resource: cinder_volume_local }
-  #     instance_uuid: { get_attr: [srv, server] }
-  #     mountpoint: /dev/vdc
-  #
-  # volume_attachment_etcd:
-  #   type: OS::Cinder::VolumeAttachment
-  #   properties:
-  #     volume_id: { get_resource: cinder_volume_etcd }
-  #     instance_uuid: { get_attr: [srv, server] }
-  #     mountpoint: /dev/vdd
-
-  # lb_pool_member:
-  #   type: OS::Neutron::LBaaS::PoolMember
-  #   properties:
-  #     pool: { get_param: lb_pool }
-  #     address: { get_attr: [ srv, private_ip ] }
-  #     protocol_port: { get_param: lb_port }
-  #     subnet: { get_param: subnet }

@@ -55,8 +55,7 @@
       - port-name: bastion-port
     terminate_volume: true
     userdata: "{{ lookup('template', './user-data.j2') }}"
-    meta: "group={{ bastion_server_fqdn }},host_type=bastion"
-
+    meta: "group={{ bastion_server_fqdn }},host_type=bastion,ansible_user={{ bastion_server_ssh_user }}"
 
 - os_floating_ip:
     server: "{{ bastion_server_fqdn }}"
@@ -73,9 +72,6 @@
   set_fact:
     bastion_ips: "{{ bastion_ips|default({}) | combine( {item.name: item.public_v4} ) }}"
   with_items: "{{ openstack_servers }}"
-
-- debug:
-    var: bastion_ips
 
 - name: Add the bastion to the inventory
   add_host:

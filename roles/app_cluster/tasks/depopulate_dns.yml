@@ -19,7 +19,7 @@
     record: "{{ item.1.hostname }}"
     value: "{{ item.1.ip }}"
     type: "{{ item.1.type }}"
-    state: present
+    state: absent
   with_subelements:
     - "{{ openstack_dns_records | default([]) }}"
     - entries

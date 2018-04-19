@@ -16,9 +16,16 @@
         name: bastion
         tasks_from: sshd.yml
 
-- name: message
-  hosts: localhost
+- name: Deploy OpenStack
+  hosts: bastions
   tasks:
-    - name: print notice
-      debug:
-        msg: "Configure your SSH to have bastion {{ bastions[0].host_name }} be used as a proxy to other subnets"
+    - include_role:
+        name: bastion
+        tasks_from: os_config.yml
+
+# - name: message
+#   hosts: localhost
+#   tasks:
+#     - name: print notice
+#       debug:
+#         msg: "Configure your SSH to have bastion {{ bastions[0].host_name }} be used as a proxy to other subnets"

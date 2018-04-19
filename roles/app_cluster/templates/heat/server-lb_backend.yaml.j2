@@ -1,10 +1,10 @@
 heat_template_version: 2016-10-14
 
-description: Register servers in the LoadBalancer pool
+description: Register servers in the LoadBalancer pool as members
 
 parameters:
 
-  server:
+  servers:
     type: comma_delimited_list
     description: List of server addresses to be added to the backend
 
@@ -30,6 +30,6 @@ resources:
     type: OS::Neutron::LBaaS::PoolMember
     properties:
       pool: { get_param: lb_pool }
-      address: { get_attr: [ server, {get_param: index} ] }
-      protocol_port: { get_param: lb_port_http }
+      address: { get_param: [ servers, {get_param: index} ] }
+      protocol_port: { get_param: lb_port }
       subnet: { get_param: subnet }

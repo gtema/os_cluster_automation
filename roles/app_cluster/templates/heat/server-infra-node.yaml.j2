@@ -76,6 +76,11 @@ parameters:
     description: The Availability Zone to launch the instance.
     default: eu-de-02
 
+  volume_size_host:
+    type: number
+    description: Sys storage size of each node
+    default: 6
+
   volume_size_docker:
     type: number
     description: Size of the volume to be created.
@@ -101,22 +106,6 @@ parameters:
     type: json
     description: Server scheduler hints.
     default: {}
-
-  lb_pool_http:
-    type: string
-    description: HTTP Router Load balancer pool to attach to
-
-  lb_port_http:
-    type: number
-    description: HTTP Router Load balancer port
-
-  lb_pool_https:
-    type: string
-    description: HTTPS Router Load balancer pool to attach to
-
-  lb_port_https:
-    type: number
-    description: HTTPS Router Load balancer port
 
 outputs:
 
@@ -157,11 +146,32 @@ resources:
         host_subtype: { get_param: subtype }
         node_labels: { get_param: node_labels }
         scheduler_hints: { get_param: scheduler_hints }
+        ansible_user: {{ app_server_ssh_user }}
       net: { get_param: net }
       net_name: { get_param: net_name }
       subnet: { get_param: subnet }
       secgrp: { get_param: secgrp }
-      block_device_mapping: []
+      availability_zone: { get_param: availability_zone }
+      block_device_mapping:
+        - {"device_name": "vda", "volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
+        - {"device_name": "vdb", "volume_id": { get_resource: cinder_volume_docker }, "boot_index": -1, "delete_on_termination": true}
+        - {"device_name": "vdc", "volume_id": { get_resource: cinder_volume_local }, "boot_index": -1, "delete_on_termination": true}
+    depends_on:
+      - cinder_volume_os
+      - cinder_volume_local
+      - cinder_volume_docker
+
+  #######
+  # - server volumes
+  #######
+  cinder_volume_os:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size_host }
+      availability_zone: { get_param: availability_zone }
+      image: { get_param: image }
+      metadata:
+        purpose: os storage
 
   cinder_volume_local:
     type: OS::Cinder::Volume
@@ -169,7 +179,7 @@ resources:
       size: { get_param: volume_size_local }
       availability_zone: { get_param: availability_zone }
       metadata:
-        purpose: openshift_docker_storage
+        purpose: openshift_local_storage
 
   cinder_volume_docker:
     type: OS::Cinder::Volume
@@ -178,33 +188,3 @@ resources:
       availability_zone: { get_param: availability_zone }
       metadata:
         purpose: openshift_docker_storage
-
-  volume_attachment_docker:
-    type: OS::Cinder::VolumeAttachment
-    properties:
-      volume_id: { get_resource: cinder_volume_docker }
-      instance_uuid: { get_attr: [srv, server] }
-      mountpoint: /dev/vdb
-
-  volume_attachment_local:
-    type: OS::Cinder::VolumeAttachment
-    properties:
-      volume_id: { get_resource: cinder_volume_local }
-      instance_uuid: { get_attr: [srv, server] }
-      mountpoint: /dev/vdc
-
-  # lb_pool_http_member:
-  #   type: OS::Neutron::LBaaS::PoolMember
-  #   properties:
-  #     pool: { get_param: lb_pool_http }
-  #     address: { get_attr: [ srv, private_ip ] }
-  #     protocol_port: { get_param: lb_port_http }
-  #     subnet: { get_param: subnet }
-  #
-  # lb_pool_https_member:
-  #   type: OS::Neutron::LBaaS::PoolMember
-  #   properties:
-  #     pool: { get_param: lb_pool_https }
-  #     address: { get_attr: [ srv, private_ip ] }
-  #     protocol_port: { get_param: lb_port_https }
-  #     subnet: { get_param: subnet }

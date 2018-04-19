@@ -104,6 +104,7 @@ resources:
               cluster_id: { get_param: domain_name }
         host_type: dns
         host_subtype: slave
+        ansible_user: {{ dns_server_ssh_user }}
 
   port:
     type: OS::Neutron::Port

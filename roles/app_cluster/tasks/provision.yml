@@ -113,13 +113,9 @@
     msg: Stack creation failed
   when:
   - stack_create is failed
-
-- name: Add the new nodes to the inventory
-  meta: refresh_inventory
-
-- name: debug inventory
-  debug:
-    var: hostvars
+# 
+# - name: Add the new nodes to the inventory
+#   meta: refresh_inventory
 
 - name: CleanUp
   include_tasks: cleanup.yml

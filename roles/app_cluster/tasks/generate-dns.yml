@@ -1,33 +1,38 @@
 ---
 - debug:
-    # msg: "item"
-    var: hostvars[item]
+    msg: "{{item}}"
+    # var: hostvars[item]
     # verbosity: 4
-  with_items: "{{ groups['cluster_hosts'] }}"
+  with_items: "{{ groups['masters.' + app_cluster_public_domain] }}"
 
 - name: "Generate list of private A records"
   set_fact:
-    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': hostvars[item]['ansible_hostname'] + app_cluster_private_hostname_suffix, 'ip': hostvars[item]['private_v4'] } ] }}"
-  with_items: "{{ groups['cluster_hosts'] }}"
+    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': (hostvars[item]['ansible_host'] | replace(domain_name, ''))[:-1], 'ip': hostvars[item]['openstack']['private_v4'] } ] }}"
+  with_items: "{{ groups['oo_all_hosts'] }}"
 
-- name: "Add wildcard records to the private A records for infrahosts"
-  set_fact:
-    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': '*.' + app_cluster_app_subdomain, 'ip': hostvars[item]['private_v4'] } ] }}"
-  with_items: "{{ groups['infra_hosts'] }}"
+# - name: "Add wildcard records to the private A records for infrahosts"
+#   set_fact:
+#     private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': '*.' + app_cluster_app_subdomain, 'ip': hostvars[item]['openstack']['private_v4'] } ] }}"
+#   with_items: "{{ groups['oo_infra_hosts'] }}"
 
-- name: "Add public master cluster hostname records to the private A records (single master)"
+- name: "Add LB records to the private A records for infrahosts"
   set_fact:
-    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': (hostvars[groups.masters[0]].openshift_master_cluster_public_hostname | replace(app_cluster_full_dns_domain, ''))[:-1], 'ip': hostvars[groups.masters[0]].private_v4 } ] }}"
-  when:
-    - hostvars[groups.masters[0]].openshift_master_cluster_public_hostname is defined
-    - openshift_openstack_num_masters == 1
+    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': ('*.' + app_cluster_app_subdomain + '.' + app_cluster_public_domain| replace(domain_name, ''))[:-1], 'ip': stack_lb_ip } ] }}"
+  # with_items: "{{ groups['oo_infra_hosts'] }}"
 
-- name: "Add public master cluster hostname records to the private A records (multi-master)"
+- name: "Add public master cluster hostname records to the private A records (LB)"
   set_fact:
-    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': (hostvars[groups.masters[0]].openshift_master_cluster_public_hostname | replace(app_cluster_full_dns_domain, ''))[:-1], 'ip': hostvars[groups.lb[0]].private_v4 } ] }}"
-  when:
-    - hostvars[groups.masters[0]].openshift_master_cluster_public_hostname is defined
-    - openshift_openstack_num_masters > 1
+    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': (app_cluster_name + '.' + app_cluster_public_domain | replace(domain_name, ''))[:-1], 'ip': stack_lb_ip } ] }}"
+  # when:
+    # - hostvars[groups.masters[0]].openshift_master_cluster_public_hostname is defined
+    # - openshift_openstack_num_masters == 1
+
+# - name: "Add public master cluster hostname records to the private A records (multi-master)"
+#   set_fact:
+#     private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'hostname': (hostvars[groups.masters[0]].openshift_master_cluster_public_hostname | replace(app_cluster_full_dns_domain, ''))[:-1], 'ip': hostvars[item]['openstack']['private_v4'] } ] }}"
+#   when:
+#     - hostvars[groups.masters[0]].openshift_master_cluster_public_hostname is defined
+#     - openshift_openstack_num_masters > 1
 
 - name: "Set the private DNS server to use the external value (if provided)"
   set_fact:
@@ -43,7 +48,7 @@
   set_fact:
     private_named_records:
       - view: "private"
-        zone: "{{ app_cluster_full_dns_domain }}"
+        zone: "{{ domain_name }}"
         server: "{{ nsupdate_server_private }}"
         key_name: "{{ nsupdate_private_key_name|default('private-' + app_cluster_full_dns_domain) }}"
         key_secret: "{{ nsupdate_key_secret_private }}"
@@ -103,4 +108,4 @@
 
 - name: "Generate the final openshift_openstack_dns_records"
   set_fact:
-    openshift_openstack_dns_records: "{{ private_named_records|default([]) + public_named_records|default([]) }}"
+    openstack_dns_records: "{{ private_named_records|default([]) + public_named_records|default([]) }}"

@@ -1,6 +1,6 @@
 heat_template_version: 2016-10-14
 
-description: OpenShift cluster server
+description: Test template, which reproduces failure of block_device_mapping_v2 using sdX device names
 
 parameters:
 
@@ -32,52 +32,11 @@ parameters:
     description: Sys storage size of each node
     default: 6
 
-  volume_size_docker:
-    type: number
-    description: Size of the volume to be created.
-    default: 1
-    constraints:
-      - range: { min: 1, max: 1024 }
-        description: must be between 1 and 1024 Gb.
-
-  volume_size_local:
-    type: number
-    description: Size of the volume to be created.
-    default: 1
-    constraints:
-      - range: { min: 1, max: 1024 }
-        description: must be between 1 and 1024 Gb.
-
-  volume_size_etcd:
-    type: number
-    description: Size of the etcd volume to be created.
-    default: 1
-    constraints:
-      - range: { min: 1, max: 1024 }
-        description: must be between 1 and 1024 Gb.
-
   secgrp:
     type: comma_delimited_list
     label: Security groups
     description: Security group resources
     default: default
-
-  network_name_prefix:
-    type: string
-    description: >
-      The name of the network to create
-    default: test
-
-  service_subnet_cidr:
-    type: string
-    description: >
-      The subnet used for instance to instance communication
-    default: 192.168.99.0/24
-
-  dns_nameservers:
-    type: comma_delimited_list
-    description: Addresses of a dns nameserver reachable in your environment
-    default: '8.8.8.8'
 
   image:
     type: string
@@ -91,25 +50,17 @@ resources:
   network:
     type: OS::Neutron::Net
     properties:
-      name:
-        str_replace:
-          template: "_prefix_-network"
-          params:
-            "_prefix_": { get_param: network_name_prefix }
+      name: test-network
 
   subnet:
     type: OS::Neutron::Subnet
     properties:
-      cidr: { get_param: service_subnet_cidr }
+      cidr: 192.168.0.0/24
       network: { get_resource: network }
       dns_nameservers:
         - 8.8.8.8
         - 8.8.4.4
-      name:
-        str_replace:
-          template: "_prefix_-subnet"
-          params:
-            "_prefix_": { get_param: network_name_prefix }
+      name: test-subnet
 
   router:
     type: OS::Neutron::Router
@@ -131,63 +82,15 @@ resources:
     properties:
       name:      { get_param: name }
       key_name:  { get_param: key_name }
-      # image:     { get_param: image }
       flavor:    { get_param: flavor }
       availability_zone: { get_param: availability_zone }
       block_device_mapping_v2:
         - {"device_name": "sda", "volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
-        - {"device_name": "sdb", "volume_id": { get_resource: cinder_volume_docker }, "boot_index": -1, "delete_on_termination": true}
-        - {"device_name": "sdc", "volume_id": { get_resource: cinder_volume_local }, "boot_index": -1, "delete_on_termination": true}
-        - {"device_name": "sdd", "volume_id": { get_resource: cinder_volume_etcd }, "boot_index": -1, "delete_on_termination": true}
+        - {"device_name": "sdb", "volume_id": { get_resource: cinder_volume_local }, "boot_index": -1, "delete_on_termination": true}
 
       networks:
         - subnet: { get_resource: subnet }
-        # - port: { get_resource: port }
       security_groups: { get_param: secgrp }
-      user_data:
-        str_replace:
-          template: |
-            #cloud-config
-            cloud_config_modules:
-            - disk_setup
-            - mounts
-
-            fqdn: __name__
-
-            write_files:
-              - path: "/etc/sysconfig/docker-storage-setup"
-                permissions: "0644"
-                owner: "root"
-                content: |
-                  DEVS='/dev/vdb'
-                  VG=docker_vol
-                  DATA_SIZE=95%VG
-                  STORAGE_DRIVER=overlay2
-                  CONTAINER_ROOT_LV_NAME=dockerlv
-                  CONTAINER_ROOT_LV_MOUNT_PATH=/var/lib/docker
-                  CONTAINER_ROOT_LV_SIZE=100%FREE
-
-            fs_setup:
-            - label: emptydir
-              filesystem: xfs
-              device: /dev/vdc
-              partition: auto
-            - label: etcd_storage
-              filesystem: xfs
-              device: /dev/vdd
-              partition: auto
-
-            runcmd:
-            - mkdir -p /var/lib/origin/openshift.local.volumes
-            - mkdir -p /var/lib/etcd
-
-            mounts:
-            - [ /dev/vdc, /var/lib/origin/openshift.local.volumes, xfs, "defaults,gquota" ]
-            - [ /dev/vdd, /var/lib/etcd, xfs, "defaults" ]
-          params:
-            __name__: { get_param: name }
-      user_data_format: RAW
-      user_data_update_policy: IGNORE
 
   cinder_volume_os:
     type: OS::Cinder::Volume
@@ -201,23 +104,7 @@ resources:
   cinder_volume_local:
     type: OS::Cinder::Volume
     properties:
-      size: { get_param: volume_size_local }
+      size: 1
       availability_zone: { get_param: availability_zone }
       metadata:
-        purpose: openshift_local_storage
-
-  cinder_volume_docker:
-    type: OS::Cinder::Volume
-    properties:
-      size: { get_param: volume_size_docker }
-      availability_zone: { get_param: availability_zone }
-      metadata:
-        purpose: openshift_docker_storage
-
-  cinder_volume_etcd:
-    type: OS::Cinder::Volume
-    properties:
-      size: { get_param: volume_size_etcd }
-      availability_zone: { get_param: availability_zone }
-      metadata:
-        purpose: openshift_etcd_storage
+        purpose: additional storage

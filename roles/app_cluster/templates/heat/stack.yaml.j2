@@ -118,99 +118,9 @@ resources:
     properties:
       cluster_name: { get_param: cluster_public_domain }
 
-  # pool_router_80:
-  #   type: OS::Neutron::LBaaS::Pool
-  #   properties:
-  #     lb_algorithm: ROUND_ROBIN
-  #     protocol: TCP
-  #     listener: { get_resource: listener_router_80 }
-  #
-  # pool_router_443:
-  #   type: OS::Neutron::LBaaS::Pool
-  #   properties:
-  #     lb_algorithm: ROUND_ROBIN
-  #     protocol: TCP
-  #     listener: { get_resource: listener_router_443 }
-  #
-  # pool_router_8443:
-  #   type: OS::Neutron::LBaaS::Pool
-  #   properties:
-  #     lb_algorithm: ROUND_ROBIN
-  #     protocol: TCP
-  #     listener: { get_resource: listener_admin }
-  #
-  # listener_router_80:
-  #   type: OS::Neutron::LBaaS::Listener
-  #   properties:
-  #     name: lsnr-router-80
-  #     loadbalancer: { get_resource: loadbalancer }
-  #     protocol: TCP
-  #     protocol_port: 80
-  #
-  # listener_router_443:
-  #   type: OS::Neutron::LBaaS::Listener
-  #   properties:
-  #     name: lsnr-router-443
-  #     loadbalancer: { get_resource: loadbalancer }
-  #     protocol: TCP
-  #     protocol_port: 443
-  #
-  # listener_admin:
-  #   type: OS::Neutron::LBaaS::Listener
-  #   properties:
-  #     name: lsnr-admin-8443
-  #     loadbalancer: { get_resource: loadbalancer }
-  #     protocol: TCP
-  #     protocol_port: 8443
-  #
-  # loadbalancer:
-  #   type: OS::Neutron::LBaaS::LoadBalancer
-  #   properties:
-  #     name: { get_param: app_cluster_lb_name }
-  #     description: Master load-balancer
-  #     vip_subnet: { get_attr: [network, service_subnet] }
-
-#   etcd:
-#     type: OS::Heat::ResourceGroup
-#     properties:
-#       count: { get_param: count_etcd }
-#       resource_def:
-#         type: server.yaml
-#         properties:
-#           name:
-#             str_replace:
-#               template: k8s_type-%index%.cluster_id
-#               params:
-#                 cluster_id: internal.oc.example.com
-#                 k8s_type: etcd
-#           cluster_env: oc.example.com
-#           cluster_id:  openshift.oc.example.com
-#           group:
-#             str_replace:
-#               template: k8s_type.cluster_id
-#               params:
-#                 k8s_type: etcds
-#                 cluster_id: openshift.oc.example.com
-#           type:        etcd
-#           image:       { get_param: image_name }
-#           flavor:      s2.large.2
-#           key_name:    ag-KeyPair
-#           net:         { get_resource: net }
-#           subnet:      { get_resource: subnet }
-#           net_name:
-#             str_replace:
-#               template: openshift-ansible-cluster_id-net
-#               params:
-#                 cluster_id: openshift.oc.example.com
-#           secgrp:
-#             - { get_resource: etcd-secgrp }
-#             - { get_resource: common-secgrp }
-#           attach_float_net: false
-#           volume_size: 2
-#     depends_on:
-#       - interface
-#
-#
+  #######
+  # - master nodes (with etcd on top)
+  #######
   masters:
     type: OS::Heat::ResourceGroup
     properties:
@@ -248,11 +158,12 @@ resources:
           volume_size_docker: { get_param: volume_size_docker }
           volume_size_local: { get_param: volume_size_local }
           volume_size_etcd: { get_param: volume_size_etcd }
-          # lb_pool: { get_resource: pool_router_8443 }
-          # lb_port: 8443
     depends_on:
       - network
 
+  #######
+  # - compute nodes (pods)
+  #######
   compute_nodes:
     type: OS::Heat::ResourceGroup
     properties:
@@ -289,11 +200,15 @@ resources:
           secgrp:
             - { get_attr: [sg, node-secgrp] }
             - { get_attr: [sg, common-secgrp] }
+          volume_size_host: { get_param: volume_size_host }
           volume_size_docker: { get_param: volume_size_docker }
           volume_size_local: { get_param: volume_size_local }
     depends_on:
       - network
 
+  #######
+  # - infrastructure nodes (openshift router)
+  #######
   infra_nodes:
     type: OS::Heat::ResourceGroup
     properties:
@@ -329,45 +244,164 @@ resources:
             - { get_attr: [sg, node-secgrp] }
             - { get_attr: [sg, common-secgrp] }
             - { get_attr: [sg, infra-secgrp] }
+          volume_size_host: { get_param: volume_size_host }
           volume_size_docker: { get_param: volume_size_docker }
           volume_size_local: { get_param: volume_size_local }
-          # lb_pool_https: { get_resource: pool_router_443 }
-          # lb_port_https: 443
-          # lb_pool_http: { get_resource: pool_router_80 }
-          # lb_port_http: 80
     depends_on:
       - network
 
-  # reg_masters:
-  #   type: OS::Heat::ResourceGroup
-  #   properties:
-  #     count: { get_param: count_infra }
-  #     resource_def:
-  #       type: server-lb_backend.yaml
-  #       properties:
-  #         # Note you have to pass the index and the entire list into the
-  #         # nested template, resolving via %index% doesn't work directly
-  #         # in the get_param here
-  #         index: "%index%"
-  #         servers: { get_attr: [ infra_nodes, private_ip ] }
-  #         subnet:  { get_attr: [network, service_subnet] }
-  #         lb_pool: { get_resource: pool_router_443 }
-  #         lb_port: 443
+  #######
+  # - cluster load balancer
+  #######
+  loadbalancer:
+    type: OS::Neutron::LBaaS::LoadBalancer
+    properties:
+      name: { get_param: app_cluster_lb_name }
+      description: Master load-balancer
+      vip_subnet: { get_attr: [network, service_subnet] }
+
+  #######
+  # - load balancer listeners
+  #######
+  listener_router_80:
+    type: OS::Neutron::LBaaS::Listener
+    properties:
+      name: lsnr-router-80
+      loadbalancer: { get_resource: loadbalancer }
+      protocol: TCP
+      protocol_port: 80
+
+  listener_router_443:
+    type: OS::Neutron::LBaaS::Listener
+    properties:
+      name: lsnr-router-443
+      loadbalancer: { get_resource: loadbalancer }
+      protocol: TCP
+      protocol_port: 443
+
+  listener_admin:
+    type: OS::Neutron::LBaaS::Listener
+    properties:
+      name: lsnr-admin-8443
+      loadbalancer: { get_resource: loadbalancer }
+      protocol: TCP
+      protocol_port: 8443
+
+  #######
+  # - load balancer pools
+  #######
+  pool_router_80:
+    type: OS::Neutron::LBaaS::Pool
+    properties:
+      lb_algorithm: ROUND_ROBIN
+      protocol: TCP
+      listener: { get_resource: listener_router_80 }
+
+  pool_router_443:
+    type: OS::Neutron::LBaaS::Pool
+    properties:
+      lb_algorithm: ROUND_ROBIN
+      protocol: TCP
+      listener: { get_resource: listener_router_443 }
+
+  pool_admin_8443:
+    type: OS::Neutron::LBaaS::Pool
+    properties:
+      lb_algorithm: ROUND_ROBIN
+      protocol: TCP
+      listener: { get_resource: listener_admin }
+
+  #######
+  # - load balancer health monitors
+  #######
+  pool_router_80_monitor:
+    type: OS::Neutron::LBaaS::HealthMonitor
+    properties:
+      type: TCP
+      delay: 5
+      max_retries: 5
+      timeout: 5
+      pool: { get_resource: pool_router_80 }
+
+  pool_router_443_monitor:
+    type: OS::Neutron::LBaaS::HealthMonitor
+    properties:
+      type: TCP
+      delay: 5
+      max_retries: 5
+      timeout: 5
+      pool: { get_resource: pool_router_443 }
+
+  pool_admin_monitor:
+    type: OS::Neutron::LBaaS::HealthMonitor
+    properties:
+      type: HTTP
+      http_method: GET
+      url_path: /healthz/ready
+      delay: 5
+      max_retries: 3
+      timeout: 10
+      pool: { get_resource: pool_admin_8443 }
+
+  #######
+  # - register master nodes in the load balancer (pool members)
+  #######
+  reg_lb_masters:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count_master }
+      resource_def:
+        type: server-lb_backend.yaml
+        properties:
+          # Note you have to pass the index and the entire list into the
+          # nested template, resolving via %index% doesn't work directly
+          # in the get_param here
+          index: "%index%"
+          servers: { get_attr: [ masters, private_ip ] }
+          subnet:  { get_attr: [ network, service_subnet ] }
+          lb_pool: { get_resource: pool_admin_8443 }
+          lb_port: 8443
+
+  #######
+  # - register infra nodes in the load balancer (pod:80)
+  #######
+  reg_lb_router_80:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count_infra }
+      resource_def:
+        type: server-lb_backend.yaml
+        properties:
+          # Note you have to pass the index and the entire list into the
+          # nested template, resolving via %index% doesn't work directly
+          # in the get_param here
+          index: "%index%"
+          servers: { get_attr: [ infra_nodes, private_ip ] }
+          subnet:  { get_attr: [ network, service_subnet ] }
+          lb_pool: { get_resource: pool_router_80 }
+          lb_port: 80
+
+  #######
+  # - register master nodes in the load balancer (pod:443)
+  #######
+  reg_lb_router_8443:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count_infra }
+      resource_def:
+        type: server-lb_backend.yaml
+        properties:
+          # Note you have to pass the index and the entire list into the
+          # nested template, resolving via %index% doesn't work directly
+          # in the get_param here
+          index: "%index%"
+          servers: { get_attr: [ infra_nodes, private_ip ] }
+          subnet:  { get_attr: [ network, service_subnet ] }
+          lb_pool: { get_resource: pool_router_443 }
+          lb_port: 443
 
 outputs:
 
-  # etcd_names:
-  #   description: Name of the etcds
-  #   value: { get_attr: [ etcd, name ] }
-  #
-  # etcd_ips:
-  #   description: IPs of the etcds
-  #   value: { get_attr: [ etcd, private_ip ] }
-  #
-  # etcd_floating_ips:
-  #   description: Floating IPs of the etcds
-  #   value: { get_attr: [ etcd, floating_ip ] }
-  #
   master_names:
     description: Name of the masters
     value: { get_attr: [ masters, name ] }
@@ -404,6 +438,6 @@ outputs:
     description: Floating IPs of the infra nodes
     value: { get_attr: [ infra_nodes, floating_ip ] }
 
-  # lb_ip:
-  #   description: IP of the LB
-  #   value: { get_attr: [ loadbalancer, vip_address ] }
+  lb_ip:
+    description: IP of the LB
+    value: { get_attr: [ loadbalancer, vip_address ] }

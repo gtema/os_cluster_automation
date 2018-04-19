@@ -28,7 +28,7 @@ options {
 	*/
 	// recursion yes;
 	forward only;
-	forwarders { {% for ipaddr in forwarders %} {{ ipaddr }} ; {% endfor %} } ;
+	forwarders { {% for ipaddr in dns_forwarders %} {{ ipaddr }} ; {% endfor %} } ;
 
 	dnssec-enable {% if dnssec_enable is defined and dnssec_enable %}yes{% else %}no{% endif %};
 	dnssec-validation {% if dnssec_validation is defined and dnssec_validation %}yes{% else %}no{% endif %};

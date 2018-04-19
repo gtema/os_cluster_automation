@@ -1,0 +1,7 @@
+clouds:
+  otc:
+    auth:
+      username: {{ lookup('env','OS_USERNAME') | default(omit) }}
+      password: {{ lookup('env','OS_PASSWORD') | default(omit) }}
+    ak: {{ lookup('env','S3_ACCESS_KEY_ID') | default(omit) }}
+    sk: {{ lookup('env','S3_SECRET_ACCESS_KEY') | default(omit) }}

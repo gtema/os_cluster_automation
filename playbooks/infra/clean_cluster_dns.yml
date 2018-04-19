@@ -20,4 +20,4 @@
   tasks:
     - include_role:
         name: app_cluster
-        tasks_from: populate_dns
+        tasks_from: depopulate_dns

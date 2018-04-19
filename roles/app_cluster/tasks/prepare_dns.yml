@@ -1,0 +1,45 @@
+---
+- name: "Find DNS master from inventory"
+  set_fact:
+    dns_master: "{{ dns_master | default() + hostvars[item]['ansible_ssh_host'] }}"
+  when:
+    - hostvars[item]['openstack']['metadata']['host_type'] is defined
+    - hostvars[item]['openstack']['metadata']['host_subtype'] is defined
+    - hostvars[item]['openstack']['metadata']['host_type'] == 'dns'
+    - hostvars[item]['openstack']['metadata']['host_subtype'] == 'master'
+  with_items: "{{ groups['oo_dns_hosts'] }}"
+
+- name: "Output master"
+  debug:
+    msg: "DNS master IP address is {{dns_master}}"
+
+- fail:
+    msg: "Can not find dns_master in inventory"
+  when:
+  - dns_master is not defined
+
+- name: check for openstack client
+  command: openstack
+  register: openstack_cli_exists
+  ignore_errors: True
+
+- name: Check if the stack exists
+  command: openstack stack output show -f value -c output_value {{ app_cluster_stack_name }} lb_ip
+  ignore_errors: True
+  register: stack_output_lb_ip
+  when: openstack_cli_exists is succeeded
+
+- set_fact:
+    # Need "safe" to create an Ansible safe dictionary object.
+    stack_lb_ip: "{{ stack_output_lb_ip.stdout|safe }}"
+
+- name: debug lb_ip
+  debug:
+    var: stack_lb_ip
+
+- name: Generate DNS records
+  include_tasks: generate-dns.yml
+
+- name: debug ns records
+  debug:
+    var: openstack_dns_records

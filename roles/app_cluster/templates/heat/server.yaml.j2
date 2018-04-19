@@ -9,33 +9,6 @@ parameters:
     label: Name
     description: Name
 
-  # group:
-  #   type: string
-  #   label: Host Group
-  #   description: The Primary Ansible Host Group
-  #   default: host
-  #
-  # cluster_env:
-  #   type: string
-  #   label: Cluster environment
-  #   description: Environment of the cluster
-  #
-  # cluster_id:
-  #   type: string
-  #   label: Cluster ID
-  #   description: Identifier of the cluster
-  #
-  # type:
-  #   type: string
-  #   label: Type
-  #   description: Type master or node
-  #
-  # subtype:
-  #   type: string
-  #   label: Sub-type
-  #   description: Sub-type compute or infra for nodes, default otherwise
-  #   default: default
-
   key_name:
     type: string
     label: Key name
@@ -88,12 +61,11 @@ parameters:
 
   user_data_file:
     type: string
-    description: path to file with user-data
+    description: content of the user-data
 
   metadata:
     type: json
     description: server metadata
-
 
 outputs:
 

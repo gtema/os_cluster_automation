@@ -9,11 +9,10 @@ app_cluster_master_nodes: 1
 app_cluster_infra_nodes: 2
 app_cluster_compute_nodes: 2
 
-app_cluster_prefix: openshift
-app_cluster_name: ""
+app_cluster_name: openshift
 app_cluster_public_domain: ""
 
 app_cluster_private_hostname_suffix: ""
 app_cluster_public_hostname_suffix: ""
 app_cluster_app_subdomain: "apps"
-app_cluster_full_dns_domain: "{{ (app_cluster_prefix|trim == '') | ternary(app_cluster_public_domain, app_cluster_prefix + '.' + app_cluster_public_domain) }}"
+app_cluster_full_dns_domain: "{{ (app_cluster_name|trim == '') | ternary(app_cluster_public_domain, app_cluster_name + '.' + app_cluster_public_domain) }}"

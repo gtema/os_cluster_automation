@@ -45,8 +45,9 @@
       when: rhn_username|default and rhn_password|default and rhn_pool|default
 
 - name: Prepare Bind
-  hosts: bind
+  hosts: dns.goncharov.org
   become: true
+  remote_user: linux
   tasks:
     - include_role:
         name: dns

@@ -20,8 +20,8 @@ bastion_server_ssh_user: linux
 
 dns_stack_name: ag-dns-stack
 dns_subnet_cidr: 192.168.178.0/24
+# DNS net should contain initially proper DNS servers, due to additional packages being provisioned
 dns_forwarders: [8.8.8.8, 8.8.4.4]
-dns_update_key: "d03QbH9yXTipIOFtWLv/AYtk23cCKvI8NK82Xj+vNYk="
 dns_slave_count: 1
 dns_server_image: Standard_CentOS_7_latest
 dns_server_flavor: s1.medium
@@ -42,25 +42,25 @@ dns_nsupdate_keys:
  #   server: '192.168.1.1'
  private:
    key_secret: "{{ dns_update_key }}"
+   key_name: "update-key"
    key_algorithm: 'hmac-md5'
    server: '192.168.178.207'
 
 app_cluster_stack_update: true
 app_cluster_stack_name: ag-app-stack
 app_cluster_subnet_cidr: 192.168.99.0/24
-app_cluster_prefix: openshift
-app_cluster_name: oc.goncharov.org
+app_cluster_name: openshift
 app_cluster_public_domain: oc.goncharov.org
 # TODO: automate DNS servers fetching through the dynamic inventory
 app_cluster_dns_nameservers: ['192.168.178.24', '192.168.178.207']
 app_cluster_node_image: Fedora-Atomic-27-20180326
-app_cluster_volume_size_docker: 1
-app_cluster_volume_size_local: 1
-app_cluster_volume_size_etcd: 1
-app_cluster_volume_size_registry: 1
+app_cluster_volume_size_docker: 10
+app_cluster_volume_size_local: 10
+app_cluster_volume_size_etcd: 10
+app_cluster_volume_size_registry: 10
 app_cluster_volume_size_host: 6
 app_cluster_node_flavor: s2.large.2
-app_cluster_compute_nodes: 0
-app_cluster_infra_nodes: 0
+app_cluster_compute_nodes: 2
+app_cluster_infra_nodes: 2
 app_cluster_master_nodes: 1
 app_cluster_lb_name: "{{domain_name}}_lb"
