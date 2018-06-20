@@ -26,9 +26,9 @@ options {
 	   attacks. Implementing BCP38 within your network would greatly
 	   reduce such attack surface
 	*/
-	// recursion yes;
+	recursion yes;
 	forward only;
-	forwarders { {% for ipaddr in dns_forwarders %} {{ ipaddr }} ; {% endfor %} } ;
+	forwarders { {% for ipaddr in dns_global_forwarders %} {{ ipaddr }} ; {% endfor %} } ;
 
 	dnssec-enable {% if dnssec_enable is defined and dnssec_enable %}yes{% else %}no{% endif %};
 	dnssec-validation {% if dnssec_validation is defined and dnssec_validation %}yes{% else %}no{% endif %};

@@ -1,5 +1,5 @@
 ---
-heat_template_version: 2016-10-14
+heat_template_version: 2016-04-08
 
 description:
   An instance for a DNS master server
@@ -98,14 +98,15 @@ resources:
       user_data_format: SOFTWARE_CONFIG
       user_data: {get_resource: init}
       metadata:
-        group:
-          str_replace:
-            template: dns.cluster_id
-            params:
-              cluster_id: { get_param: domain_name }
-        host_type: dns
-        host_subtype: master
-        ansible_user: {{ dns_server_ssh_user }}
+        groups:
+          - dns_masters
+          - str_replace:
+              template: masters.cluster_id
+              params:
+                cluster_id: { get_param: domain_name }
+        host-type: dns
+        sub-host-type: master
+        ansible_user: { get_param: ssh_user }
 
 
   port:
@@ -143,6 +144,18 @@ resources:
               DOMAIN: {get_param: domain_name}
 
 outputs:
-  ip_address:
-    # value: {get_attr: [floating_ip, floating_ip_address]}
-    value: {get_attr: [host, first_address]}
+  entry:
+    value:
+      name:
+        str_replace:
+          template: "HOSTNAME.DOMAIN"
+          params:
+            HOSTNAME: {get_param: hostname}
+            DOMAIN: {get_param: domain_name}
+      address: {get_attr: [host, first_address]}
+      groups:
+        - dns_masters
+        - str_replace:
+            template: masters.cluster_id
+            params:
+              cluster_id: { get_param: domain_name }

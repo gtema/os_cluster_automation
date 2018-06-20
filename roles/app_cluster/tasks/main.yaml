@@ -1,0 +1,84 @@
+---
+- when: module_state != 'absent'
+  block:
+    - name: create HOT stack template prefix
+      register: stack_template_pre
+      tempfile:
+        state: directory
+        prefix: otc-app-cluster
+      tags:
+        - prepare_stack
+
+    - name: Create stack templates
+      include_tasks: generate_templates.yaml
+      tags:
+        - prepare_stack
+
+    - name: Create the Heat Stack
+      os_stack:
+        name: "{{ stack_name }}"
+        template: "{{ stack_template_path }}"
+        state: "{{ module_state }}"
+        parameters:
+          cluster_id: "{{ cluster_id }}"
+          cluster_public_dns_domain: "{{ cluster_public_dns_domain }}"
+          cluster_full_dns_domain: "{{ cluster_full_dns_domain }}"
+          router_name: "{{ router_name }}"
+          dns_nameservers: "{{ dns_nameservers }}"
+          subnet_cidr: "{{ subnet_cidr }}"
+          image_name: "{{ server_image }}"
+          node_flavor: "{{ server_node_flavor }}"
+          master_flavor: "{{ server_master_flavor }}"
+          infra_flavor: "{{ server_infra_flavor }}"
+          ssh_key_name: "{{ ssh_key_name }}"
+          ssh_user: "{{ server_ssh_user }}"
+          count_compute: "{{ count_compute_nodes }}"
+          count_infra: "{{ count_infra_nodes }}"
+          count_master: "{{ count_master_nodes }}"
+          volume_size_host: "{{ volume_size_host }}"
+          volume_size_local: "{{ volume_size_local }}"
+          volume_size_docker: "{{ volume_size_docker }}"
+          volume_size_etcd: "{{ volume_size_etcd }}"
+          volume_size_registry: "{{ volume_size_registry }}"
+          lb_name: "{{ lb_name }}"
+          # availability_zones: "{{ availability_zones }}"
+        wait: yes
+      register: stack_output
+
+    - name: debug stack output
+      debug:
+        var: stack_output
+
+    - name: restructure output
+      set_fact:
+        stack_data: "{{ stack_data | default([]) | combine( {item['output_key']: item['output_value']} ) }}"
+      with_items: "{{ stack_output.stack.outputs }}"
+
+    - name: debug stack output
+      debug:
+        var: stack_data
+
+    - name: Add hosts to inventory
+      add_host:
+        name: "{{ item.name }}"
+        groups: app_cluster,{{ item.group | default(omit)}}
+        ansible_host: "{{ item.address }}"
+        ansible_user: "{{ server_ssh_user }}"
+        openstack:
+          metadata:
+            host-type: "{{ item.host_type }}"
+            sub-host-type: "{{ item.host_subtype }}"
+            group: "{{ item.group | default(omit) }}"
+      with_items: "{{ stack_data['master_instances'] | union(stack_data['infra_instances']) | union(stack_data['compute_instances']) | union(stack_data['lb_instances']) }}"
+
+    # - name: Add dummy LB hosts to inventory
+    #   add_host:
+    #     name: "{{ item.name }}"
+    #     groups: app_cluster
+    #     ansible_host: "{{ item.address }}"
+    #     host-type: "{{ item.host-type }}"
+    #     sub-host-type: "{{ item.sub-host-type }}"
+    #   with_items: "{{ stack_data['lb_instances'] }}"
+
+    - name: CleanUp
+      include_tasks: cleanup.yaml

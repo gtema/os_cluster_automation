@@ -1,7 +1,19 @@
 include "/etc/named/update.key" ;
 
+{% for zone in zones %}
 zone {{ zone }} {
-  type master ; 
-  file "/var/named/dynamic/zone.db" ;
+  type master ;
+  file "/var/named/dynamic/{{ zone }}.db" ;
   allow-update { key update-key ; } ;
 };
+
+{% endfor %}
+
+{% for zone in reverse_zones %}
+zone "{{ zone }}" {
+  type master ;
+  file "/var/named/dynamic/{{ zone }}.db" ;
+  allow-update { key update-key ; } ;
+};
+
+{% endfor %}

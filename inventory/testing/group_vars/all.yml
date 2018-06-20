@@ -1,0 +1,45 @@
+cloud_name: otc
+
+infra_prefix: x-
+
+# Those can't remain in the network_infra role, since all other roles need those vars
+# network_name_suffix: otc-net
+
+# Those are used in all roles
+router_name_suffix: otc-vpc-router
+router_name: "{{ (infra_prefix + router_name_suffix) }}"
+
+
+domain_name: example.com
+
+# bastion_assign_public_ip: false
+bastion_image: Fedora-Cloud-Base-28-1.1
+bastion_server_ssh_user: fedora
+
+ssh_key_name: cloud-KeyPair
+ansible_ssh_private_key_file: ~/.ssh/cloud-KeyPair.pem
+
+
+dns_slave_count: 1
+
+# NOTE: YOU MUST CHANGE THIS!
+# Can be generated with:
+#     ddns-confgen -r /dev/urandom
+# or:
+#     rndc-confgen -a -c update.key -k update-key -r /dev/urandom
+dns_update_key: "cnPux9NXt4zSq9hCXufVfuxH4EjgKgEvNxJ+z5HR9Tk="
+
+dns_nsupdate_keys:
+ private:
+   key_secret: "{{ dns_update_key }}"
+   key_name: "update-key"
+   key_algorithm: 'hmac-md5'
+
+app_cluster_compute_nodes: 3
+app_cluster_infra_nodes: 3
+app_cluster_master_nodes: 1
+
+
+bastions_group_cache_file: .ansible_group_bastions_cache.yaml
+dns_group_cache_file: .ansible_group_bind_cache.yaml
+app_cluster_cache_file: .ansible_group_app_cluster_cache.yaml

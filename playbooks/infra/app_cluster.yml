@@ -1,9 +1,0 @@
----
-- name: Provision K8s/OpenShift infrastructure
-  hosts: localhost
-  environment:
-    OS_CLOUD: "{{ cloud_name }}"
-  tasks:
-    - include_role:
-        name: app_cluster
-        tasks_from: provision

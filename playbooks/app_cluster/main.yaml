@@ -1,0 +1,29 @@
+---
+- name: Provision K8s/OpenShift infrastructure
+  hosts: localhost
+  environment:
+    OS_CLOUD: "{{ cloud_name }}"
+  tasks:
+    - block:
+        # Read the cached output from the dns playbook to find nameservers
+        - include_tasks: ../common/read_cached_hostvars.yaml
+          vars:
+            cache_file: "{{ dns_group_cache_file }}"
+            cache_container: "dns_vars"
+
+        - name: find nameservers
+          set_fact:
+            dns_nameservers: "{{ dns_vars.bind.hosts | list| map('extract', dns_vars.bind.hosts, 'ansible_host') | list }}"
+      when: dns_nameservers is not defined
+
+    - name: Debug dns_nameservers
+      debug:
+        msg: "{{ dns_nameservers }}"
+
+    - include_role:
+        name: app_cluster
+
+    - include_tasks: ../common/cache_required_hostvars.yaml
+      vars:
+        group_name: "app_cluster"
+        cache_file: "{{ app_cluster_cache_file | default('/tmp/ansible_group_cluster_cache.yaml') }}"

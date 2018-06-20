@@ -1,3 +1,0 @@
----
-- name: Create network infrastructure
-  include_tasks: network.yml

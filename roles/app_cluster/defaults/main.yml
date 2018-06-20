@@ -1,18 +1,55 @@
 ---
-app_cluster_stack_state: present
-app_cluster_volume_size_docker: 15
-app_cluster_volume_size_local: 15
-app_cluster_volume_size_etcd: 15
-app_cluster_volume_size_registry: 15
-app_cluster_volume_size_host: 6
-app_cluster_master_nodes: 1
-app_cluster_infra_nodes: 2
-app_cluster_compute_nodes: 2
 
-app_cluster_name: openshift
-app_cluster_public_domain: ""
+module_state: present
 
-app_cluster_private_hostname_suffix: ""
-app_cluster_public_hostname_suffix: ""
-app_cluster_app_subdomain: "apps"
-app_cluster_full_dns_domain: "{{ (app_cluster_name|trim == '') | ternary(app_cluster_public_domain, app_cluster_name + '.' + app_cluster_public_domain) }}"
+infra_prefix: test- # This should be overridden in inventory
+domain_name: example.com # This also should be overridden in inventory
+
+# Names
+stack_name: "{{ app_cluster_stack_name | default(infra_prefix + 'app-stack')}}"
+
+cluster_id: "{{ app_cluster_id | default('openshift') }}"
+cluster_public_dns_domain: "{{ app_cluster_public_dns_domain | default(domain_name) }}"
+cluster_full_dns_domain: "{{ (cluster_id|trim == '') | ternary(cluster_public_dns_domain, cluster_id + '.' + cluster_public_dns_domain) }}"
+lb_name: "{{ app_cluster_lb_name | default(cluster_public_dns_domain + '_lb')}}"
+cluster_app_subdomain: "{{ app_cluster_app_subdomain | default('apps')}}"
+
+
+# Cluster sizing
+volume_size_docker: "{{ app_cluster_volume_size_docker | default(15) }}"
+volume_size_local: "{{ app_cluster_volume_size_local | default(30) }}"
+volume_size_etcd: "{{ app_cluster_volume_size_etcd | default(25) }}"
+volume_size_registry: "{{ app_cluster_volume_size_registry | default(30) }}"
+volume_size_host: "{{ app_cluster_volume_size_host | default(6) }}"
+
+count_master_nodes: "{{ app_cluster_master_nodes | default(1) }}"
+count_infra_nodes: "{{ app_cluster_infra_nodes | default(3) }}"
+count_compute_nodes: "{{ app_cluster_compute_nodes | default(3) }}"
+
+
+# Node data
+subnet_cidr: "{{ app_cluster_subnet_cidr | default('192.168.99.0/24') }}"
+# https://docs.openshift.com/container-platform/3.9/install_config/install/prerequisites.html
+server_node_flavor: "{{ app_cluster_node_flavor | default('s2.large.4')}}"
+server_master_flavor: "{{ app_cluster_server_flavor | default('s2.2xlarge.4') }}"
+server_infra_flavor: "{{ app_cluster_infra_flavor | default('s2.xlarge.2') }}"
+# TODO: fetch and upload image if it does not exist
+server_image: "{{ app_cluster_server_image | default('Fedora-AtomicHost-28-20180613') }}"
+server_ssh_user: "{{ app_cluster_server_ssh_user | default('fedora') }}"
+ssh_key_name: "{{ (infra_prefix + '-KeyPair')}}"
+
+
+# Infrastructure data
+# external_network_name: admin_external_net
+router_name_suffix: otc-vpc-router
+router_name: "{{ (infra_prefix + router_name_suffix) }}"
+dns_nameservers: "{{ app_cluster_dns_nameservers | default(['8.8.8.8', '8.8.4.4'])}}"
+
+availability_zones:
+  - eu-de-01
+  - eu-de-02
+
+master_server_group_policies:
+  - anti-affinity
+infra_server_group_policies:
+  - anti-affinity

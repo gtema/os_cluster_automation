@@ -1,5 +1,5 @@
 ---
-heat_template_version: 2016-10-14
+heat_template_version: 2016-04-08
 
 description:
   An instance for a DNS service made up of a single master and a set of
@@ -143,8 +143,8 @@ resources:
         port_range_max: 53
 
 outputs:
-  master_ip_address:
-    value: {get_attr: [master, ip_address]}
+  master_entry:
+    value: {get_attr: [master, entry]}
 
   slave_entries:
     value: {get_attr: [slaves, entries]}

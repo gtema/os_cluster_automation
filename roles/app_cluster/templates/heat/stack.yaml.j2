@@ -1,5 +1,5 @@
 ---
-heat_template_version: 2016-10-14
+heat_template_version: 2016-04-08
 
 description: OpenShift cluster
 
@@ -17,42 +17,62 @@ parameters:
   router_name:
     type: string
     description: >
-      Name of the Router to which DNS subnet will be attached to
+      Name of the Router to which AppCluster subnet will be attached to
     constraints:
     - custom_constraint: neutron.router
 
-  cloud_network:
-    type: string
-    description: >
-      Name of the global network
-    constraints:
-    - custom_constraint: neutron.network
-
-  cluster_name:
+  cluster_id:
     type: string
     description: >
       Cluster name (used in resource names)
-    default: oc.example.com
+    default: openshift
 
-  cluster_public_domain:
+  cluster_public_dns_domain:
     type: string
     description: >
-      Cluster public domain
-    default: openshift.oc.example.com
+      Public DNS domain, in which cluster is located
+    default: example.com
+
+  cluster_full_dns_domain:
+    type: string
+    description: >
+      Full public DNS domain, in which cluster is located
+    default: openshift.example.com
 
   image_name:
     type: string
-    default: Fedora-Atomic-27-20180326
+    description: Image name for the cluster node
+    # default: Fedora-Atomic-27-20180326
 
   node_flavor:
     type: string
-    default: s2.large.2
+    default: s2.large.4
+
+  master_flavor:
+    type: string
+    default: s2.xlarge.4
+
+  infra_flavor:
+    type: string
+    default: s2.xlarge.2
 
   ssh_key_name:
     type: string
     description: Name of the SSH keypair registered with Nova
     constraints:
     - custom_constraint: nova.keypair
+
+  ssh_user:
+    type: string
+    label: ssh_user
+    description: Name of the SSH user to be used for connection (to be saved as server metadata)
+
+  availability_zones:
+    type: comma_delimited_list
+    label: availability_zones
+    description: List of AZs to spread instances across
+    {% set zone_cycler = cycler( *availability_zones ) %}
+default: [{% for n in range(1, 20+1) %}"{{ zone_cycler.next() }}"{% if not loop.last %}{{','}} {% endif %}{% endfor %}]
 
   volume_size_host:
     type: number
@@ -79,11 +99,10 @@ parameters:
     description: Volume size for the docker registry storage
     default: 10
 
-  app_cluster_lb_name:
+  lb_name:
     type: string
     description: name of the LoadBalancer
     default: app-cluster-lb
-
 
   count_master:
     type: number
@@ -107,16 +126,32 @@ resources:
   network:
     type: network.yaml
     properties:
-      # service_network: {get_param: cloud_network}
       dns_nameservers: { get_param: dns_nameservers }
       service_router: { get_param: router_name }
       service_subnet_cidr: { get_param: subnet_cidr }
-      cluster_name: { get_param: cluster_public_domain }
 
   sg:
     type: sec_grp.yaml
     properties:
-      cluster_name: { get_param: cluster_public_domain }
+      cluster_name: {{ stack_name }}
+
+  #######
+  # - server groups
+  #######
+{% if master_server_group_policies|length > 0 %}
+  master_server_group:
+    type: OS::Nova::ServerGroup
+    properties:
+      name: master_server_group
+      policies: {{ master_server_group_policies | to_yaml}}
+{% endif %}
+{% if infra_server_group_policies|length > 0 %}
+  infra_server_group:
+    type: OS::Nova::ServerGroup
+    properties:
+      name: infra_server_group
+      policies: {{ infra_server_group_policies | to_yaml }}
+{% endif %}
 
   #######
   # - master nodes (with etcd on top)
@@ -132,20 +167,23 @@ resources:
             str_replace:
               template: k8s_type-%index%.internal.cluster_id
               params:
-                cluster_id: { get_param: cluster_name }
+                cluster_id: { get_param: cluster_full_dns_domain }
                 k8s_type: master
-          cluster_env: { get_param: cluster_public_domain }
-          cluster_id:  { get_param: cluster_name }
+          cluster_env: { get_param: cluster_public_dns_domain }
+          cluster_id:  {{ stack_name }}
           group:
             str_replace:
               template: k8s_type.cluster_id
               params:
                 k8s_type: masters
-                cluster_id: { get_param: cluster_name }
+                cluster_id: {{ stack_name }}
           type:        master
           image:       { get_param: image_name }
-          flavor:      { get_param: node_flavor }
+          flavor:      { get_param: master_flavor }
           key_name:    { get_param: ssh_key_name }
+          ssh_user:    { get_param: ssh_user }
+          availability_zones: { get_param: availability_zones }
+          index: "%index%"
           net:         { get_attr: [network, service_network] }
           subnet:      { get_attr: [network, service_subnet] }
           net_name:    { get_attr: [network, service_network_name] }
@@ -158,6 +196,10 @@ resources:
           volume_size_docker: { get_param: volume_size_docker }
           volume_size_local: { get_param: volume_size_local }
           volume_size_etcd: { get_param: volume_size_etcd }
+{% if master_server_group_policies|length > 0 %}
+          scheduler_hints:
+            group: { get_resource: master_server_group }
+{% endif %}
     depends_on:
       - network
 
@@ -177,16 +219,16 @@ resources:
             str_replace:
               template: sub_type_k8s_type-%index%.internal.cluster_id
               params:
-                cluster_id: { get_param: cluster_name }
+                cluster_id: { get_param: cluster_full_dns_domain }
                 sub_type_k8s_type: app-node
-          cluster_env: { get_param: cluster_public_domain }
-          cluster_id:  { get_param: cluster_name }
+          cluster_env: { get_param: cluster_public_dns_domain }
+          cluster_id:  {{ stack_name }}
           group:
             str_replace:
               template: k8s_type.cluster_id
               params:
                 k8s_type: nodes
-                cluster_id: { get_param: cluster_name }
+                cluster_id: {{ stack_name }}
           type:        node
           subtype:     app
           node_labels:
@@ -194,6 +236,9 @@ resources:
           image:       { get_param: image_name }
           flavor:      { get_param: node_flavor }
           key_name:    { get_param: ssh_key_name }
+          ssh_user:    { get_param: ssh_user }
+          availability_zones: { get_param: availability_zones }
+          index: "%index%"
           net:         { get_attr: [network, service_network] }
           subnet:      { get_attr: [network, service_subnet] }
           net_name:    { get_attr: [network, service_network_name] }
@@ -220,23 +265,26 @@ resources:
             str_replace:
               template: sub_type_k8s_type-%index%.internal.cluster_id
               params:
-                cluster_id: { get_param: cluster_name }
+                cluster_id: { get_param: cluster_full_dns_domain }
                 sub_type_k8s_type: infra-node
-          cluster_env: { get_param: cluster_public_domain }
-          cluster_id:  { get_param: cluster_name }
+          cluster_env: { get_param: cluster_public_dns_domain }
+          cluster_id:  {{ stack_name }}
           group:
             str_replace:
               template: k8s_type.cluster_id
               params:
                 k8s_type: infra
-                cluster_id: { get_param: cluster_name }
+                cluster_id: {{ stack_name }}
           type:        node
           subtype:     infra
           node_labels:
             region: infra
           image:       { get_param: image_name }
-          flavor:      { get_param: node_flavor }
+          flavor:      { get_param: infra_flavor }
           key_name:    { get_param: ssh_key_name }
+          ssh_user:    { get_param: ssh_user }
+          availability_zones: { get_param: availability_zones }
+          index: "%index%"
           net:         { get_attr: [network, service_network] }
           subnet:      { get_attr: [network, service_subnet] }
           net_name:    { get_attr: [network, service_network_name] }
@@ -244,200 +292,53 @@ resources:
             - { get_attr: [sg, node-secgrp] }
             - { get_attr: [sg, common-secgrp] }
             - { get_attr: [sg, infra-secgrp] }
+            - { get_attr: [sg, storage-secgrp] }
           volume_size_host: { get_param: volume_size_host }
           volume_size_docker: { get_param: volume_size_docker }
           volume_size_local: { get_param: volume_size_local }
+          volume_size_glusterfs: 30
+{% if infra_server_group_policies|length > 0 %}
+          scheduler_hints:
+            group: { get_resource: infra_server_group }
+{% endif %}
     depends_on:
       - network
 
   #######
-  # - cluster load balancer
+  # - Create the LoadBalancer and register hosts in the corresponding pools
   #######
-  loadbalancer:
-    type: OS::Neutron::LBaaS::LoadBalancer
-    properties:
-      name: { get_param: app_cluster_lb_name }
-      description: Master load-balancer
-      vip_subnet: { get_attr: [network, service_subnet] }
-
-  #######
-  # - load balancer listeners
-  #######
-  listener_router_80:
-    type: OS::Neutron::LBaaS::Listener
-    properties:
-      name: lsnr-router-80
-      loadbalancer: { get_resource: loadbalancer }
-      protocol: TCP
-      protocol_port: 80
-
-  listener_router_443:
-    type: OS::Neutron::LBaaS::Listener
-    properties:
-      name: lsnr-router-443
-      loadbalancer: { get_resource: loadbalancer }
-      protocol: TCP
-      protocol_port: 443
-
-  listener_admin:
-    type: OS::Neutron::LBaaS::Listener
-    properties:
-      name: lsnr-admin-8443
-      loadbalancer: { get_resource: loadbalancer }
-      protocol: TCP
-      protocol_port: 8443
-
-  #######
-  # - load balancer pools
-  #######
-  pool_router_80:
-    type: OS::Neutron::LBaaS::Pool
-    properties:
-      lb_algorithm: ROUND_ROBIN
-      protocol: TCP
-      listener: { get_resource: listener_router_80 }
-
-  pool_router_443:
-    type: OS::Neutron::LBaaS::Pool
-    properties:
-      lb_algorithm: ROUND_ROBIN
-      protocol: TCP
-      listener: { get_resource: listener_router_443 }
-
-  pool_admin_8443:
-    type: OS::Neutron::LBaaS::Pool
-    properties:
-      lb_algorithm: ROUND_ROBIN
-      protocol: TCP
-      listener: { get_resource: listener_admin }
-
-  #######
-  # - load balancer health monitors
-  #######
-  pool_router_80_monitor:
-    type: OS::Neutron::LBaaS::HealthMonitor
-    properties:
-      type: TCP
-      delay: 5
-      max_retries: 5
-      timeout: 5
-      pool: { get_resource: pool_router_80 }
-
-  pool_router_443_monitor:
-    type: OS::Neutron::LBaaS::HealthMonitor
-    properties:
-      type: TCP
-      delay: 5
-      max_retries: 5
-      timeout: 5
-      pool: { get_resource: pool_router_443 }
-
-  pool_admin_monitor:
-    type: OS::Neutron::LBaaS::HealthMonitor
-    properties:
-      type: HTTP
-      http_method: GET
-      url_path: /healthz/ready
-      delay: 5
-      max_retries: 3
-      timeout: 10
-      pool: { get_resource: pool_admin_8443 }
-
-  #######
-  # - register master nodes in the load balancer (pool members)
-  #######
-  reg_lb_masters:
-    type: OS::Heat::ResourceGroup
-    properties:
-      count: { get_param: count_master }
-      resource_def:
-        type: server-lb_backend.yaml
-        properties:
-          # Note you have to pass the index and the entire list into the
-          # nested template, resolving via %index% doesn't work directly
-          # in the get_param here
-          index: "%index%"
-          servers: { get_attr: [ masters, private_ip ] }
-          subnet:  { get_attr: [ network, service_subnet ] }
-          lb_pool: { get_resource: pool_admin_8443 }
-          lb_port: 8443
-
-  #######
-  # - register infra nodes in the load balancer (pod:80)
-  #######
-  reg_lb_router_80:
-    type: OS::Heat::ResourceGroup
-    properties:
-      count: { get_param: count_infra }
-      resource_def:
-        type: server-lb_backend.yaml
-        properties:
-          # Note you have to pass the index and the entire list into the
-          # nested template, resolving via %index% doesn't work directly
-          # in the get_param here
-          index: "%index%"
-          servers: { get_attr: [ infra_nodes, private_ip ] }
-          subnet:  { get_attr: [ network, service_subnet ] }
-          lb_pool: { get_resource: pool_router_80 }
-          lb_port: 80
-
-  #######
-  # - register master nodes in the load balancer (pod:443)
-  #######
-  reg_lb_router_8443:
-    type: OS::Heat::ResourceGroup
-    properties:
-      count: { get_param: count_infra }
-      resource_def:
-        type: server-lb_backend.yaml
-        properties:
-          # Note you have to pass the index and the entire list into the
-          # nested template, resolving via %index% doesn't work directly
-          # in the get_param here
-          index: "%index%"
-          servers: { get_attr: [ infra_nodes, private_ip ] }
-          subnet:  { get_attr: [ network, service_subnet ] }
-          lb_pool: { get_resource: pool_router_443 }
-          lb_port: 443
+  {% include 'lb.yaml.j2' %}
 
 outputs:
 
-  master_names:
-    description: Name of the masters
-    value: { get_attr: [ masters, name ] }
+  master_instances:
+    description: Instances of the type Master
+    value: { get_attr: [masters, entry] }
 
-  master_ips:
-    description: IPs of the masters
-    value: { get_attr: [ masters, private_ip ] }
+  compute_instances:
+    description: Instances of the type Compute
+    value: { get_attr: [compute_nodes, entry] }
 
-  master_floating_ips:
-    description: Floating IPs of the masters
-    value: { get_attr: [ masters, floating_ip ] }
+  infra_instances:
+    description: Instances of the type Infra
+    value: { get_attr: [infra_nodes, entry] }
 
-  node_names:
-    description: Name of the app nodes
-    value: { get_attr: [ compute_nodes, name ] }
+  lb_instances:
+    description: LoadBalancer Instances
+    value:
+      - name:
+          str_replace:
+            template: lb-0.internal.cluster_id
+            params:
+              cluster_id: { get_param: cluster_full_dns_domain }
+        host_type: lb
+        host_subtype: lb
+        address: { get_attr: [loadbalancer, vip_address] }
+        group: lb.{{ stack_name }}
+  #
+  # lb_pool:
+  #   value: { get_attr: [ loadbalancer, lb_pool_admin_8443 ] }
 
-  node_ips:
-    description: IPs of the app nodes
-    value: { get_attr: [ compute_nodes, private_ip ] }
-
-  node_floating_ips:
-    description: Floating IPs of the app nodes
-    value: { get_attr: [ compute_nodes, floating_ip ] }
-
-  infra_names:
-    description: Name of the infra nodes
-    value: { get_attr: [ infra_nodes, name ] }
-
-  infra_ips:
-    description: IPs of the infra nodes
-    value: { get_attr: [ infra_nodes, private_ip ] }
-
-  infra_floating_ips:
-    description: Floating IPs of the infra nodes
-    value: { get_attr: [ infra_nodes, floating_ip ] }
-
-  lb_ip:
-    description: IP of the LB
-    value: { get_attr: [ loadbalancer, vip_address ] }
+  # lb_ip:
+  #   description: IP of the LB
+  #   value: { get_attr: [ loadbalancer, vip_address ] }

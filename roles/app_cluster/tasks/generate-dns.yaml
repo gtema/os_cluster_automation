@@ -1,0 +1,68 @@
+---
+- name: Initialize used variables
+  set_fact:
+    private_records: []
+    private_reverse_records: []
+    openstack_dns_records: []
+    openstack_reverse_dns_records: []
+
+- name: "Generate list of private A records"
+  set_fact:
+    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'record': (item | replace(cluster_public_dns_domain, ''))[:-1], 'value': hostvars[item]['ansible_host'] } ] }}"
+  with_items: "{{ groups['g_all_hosts'] }}"
+
+- name: "Generate list of private PTR records"
+  set_fact:
+    private_reverse_records: "{{ private_reverse_records | default([]) + [ { 'type': 'PTR', 'record': (hostvars[item]['ansible_host'].split('.')[-1]), 'value': (item + '.' )} ] }}"
+  with_items: "{{ groups['g_all_hosts'] }}"
+
+- name: "Add LB records to the private A records for infrahosts"
+  set_fact:
+    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'record': ('*.' + cluster_app_subdomain + '.' + cluster_public_dns_domain| replace(cluster_public_dns_domain, ''))[:-1], 'value': stack_lb_ip } ] }}"
+
+- name: "Add public master cluster hostname (UI) records to the private A records (LB)"
+  set_fact:
+    private_records: "{{ private_records | default([]) + [ { 'type': 'A', 'record': (cluster_id + '.' + cluster_public_dns_domain | replace(cluster_public_dns_domain, ''))[:-1], 'value': stack_lb_ip } ] }}"
+
+- name: "Set the private DNS server to use the external value (if provided)"
+  set_fact:
+    nsupdate_server_private: "{{ dns_master }}"
+    nsupdate_key_secret_private: "{{ dns_nsupdate_keys['private']['key_secret'] }}"
+    nsupdate_key_algorithm_private: "{{ dns_nsupdate_keys['private']['key_algorithm'] }}"
+    nsupdate_private_key_name: "{{ dns_nsupdate_keys['private']['key_name']|default('private-' + cluster_full_dns_domain) }}"
+  when:
+    - dns_nsupdate_keys['private'] is defined
+
+- name: "Generate the private Add section for DNS"
+  set_fact:
+    private_named_records:
+      - view: "private"
+        zone: "{{ cluster_public_dns_domain }}"
+        server: "{{ nsupdate_server_private }}"
+        key_name: "{{ nsupdate_private_key_name|default('private-' + cluster_full_dns_domain) }}"
+        key_secret: "{{ nsupdate_key_secret_private }}"
+        key_algorithm: "{{ nsupdate_key_algorithm_private | lower }}"
+        entries: "{{ private_records }}"
+  when:
+    - dns_nsupdate_keys['private'] is defined
+
+- name: "Generate the private Reverse Add section for DNS"
+  set_fact:
+    private_named_reverse_records:
+      - view: "private"
+        zone: "99.168.192.in-addr.arpa"
+        server: "{{ nsupdate_server_private }}"
+        key_name: "{{ nsupdate_private_key_name|default('private-' + cluster_full_dns_domain) }}"
+        key_secret: "{{ nsupdate_key_secret_private }}"
+        key_algorithm: "{{ nsupdate_key_algorithm_private | lower }}"
+        entries: "{{ private_reverse_records }}"
+  when:
+    - dns_nsupdate_keys['private'] is defined
+
+- name: "Generate the final openstack_dns_records"
+  set_fact:
+    openstack_dns_records: "{{ private_named_records|default([]) + public_named_records|default([]) }}"
+
+- name: "Generate the final reverse openstack_reverse_dns_records"
+  set_fact:
+    openstack_reverse_dns_records: "{{ private_named_reverse_records|default([]) }}"

@@ -1,0 +1,46 @@
+---
+- name: python-dns daemon
+  become: yes
+  package:
+    name: python-dns
+    state: installed
+
+- name: "Add DNS A records"
+  nsupdate:
+    key_name: "{{ item.0.key_name }}"
+    key_secret: "{{ item.0.key_secret }}"
+    key_algorithm: "{{ item.0.key_algorithm }}"
+    server: "{{ item.0.server }}"
+    zone: "{{ item.0.zone }}"
+    record: "{{ item.1.record }}"
+    value: "{{ item.1.value }}"
+    type: "{{ item.1.type }}"
+    state: "{{ dns_record_state | default('present') }}"
+  with_subelements:
+    - "{{ openstack_dns_records | default([]) }}"
+    - entries
+  register: nsupdate_add_result
+  until: nsupdate_add_result is succeeded
+  retries: 10
+  delay: 1
+
+- name: "Add DNS PTR records"
+  nsupdate:
+    key_name: "{{ item.0.key_name }}"
+    key_secret: "{{ item.0.key_secret }}"
+    key_algorithm: "{{ item.0.key_algorithm }}"
+    server: "{{ item.0.server }}"
+    zone: "{{ item.0.zone }}"
+    record: "{{ item.1.record }}"
+    value: "{{ item.1.value }}"
+    type: "{{ item.1.type }}"
+    ttl: 60
+    state: "{{ dns_record_state | default('present') }}"
+  with_subelements:
+    - "{{ openstack_reverse_dns_records }}"
+    - entries
+  when: openstack_reverse_dns_records is defined
+  register: nsupdate_add_reverse_result
+  until: nsupdate_add_reverse_result is succeeded
+  retries: 10
+  delay: 1

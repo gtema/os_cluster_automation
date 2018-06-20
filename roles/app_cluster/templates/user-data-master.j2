@@ -33,5 +33,5 @@ runcmd:
 - mkdir -p /var/lib/etcd
 
 mounts:
-- [ /dev/vdc, /var/lib/origin/openshift.local.volumes, xfs, "defaults,gquota" ]
+- [ /dev/vdc, /var/lib/origin, xfs, "defaults,gquota" ]
 - [ /dev/vdd, /var/lib/etcd, xfs, "defaults" ]

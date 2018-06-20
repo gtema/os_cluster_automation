@@ -1,2 +1,5 @@
-.ansible_inventory
+.ansible_*
 inv.log
+inventory/production
+__pycache__
+*.retry

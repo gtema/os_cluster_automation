@@ -1,0 +1,6 @@
+---
+- name: Destroy the Heat Stack
+  ignore_errors: True
+  os_stack:
+    name: "{{ stack_name }}"
+    state: absent

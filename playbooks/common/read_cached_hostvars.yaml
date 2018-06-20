@@ -1,0 +1,37 @@
+---
+- name: Read cache content
+  include_vars:
+    file: "{{ (lookup('env', 'PWD') + '/' + (cache_file | mandatory)) }}"
+    name: "{{ (cache_container | mandatory )}}"
+
+# - name: check host groups
+#   set_fact:
+#     cache_container: "{{ cache_container | combine({'_meta':{'hostvars':{item:{'groups'}}}}}) }}"
+#   with_items: "{{ cache_container | rejectattr('_meta') }}"
+
+# - name: register host vars
+#   add_host:
+#     name: "{{ item.name }}"
+#     # groups: "{{ cache_container }}"
+#     ansible_host: "{{ item.address }}"
+#     ansible_user: "{{ server_ssh_user }}"
+#     host_type: "{{ item.host_type }}"
+#     host_subtype: "{{ item.host_subtype }}"
+#   with_items: "{{ cache_container._meta.hostvars }}"
+
+# - name: add hosts to groups
+#   debug:
+#     # msg: "{{ item  }}"
+#     msg: "{{ vars[cache_container] | reject('equalto','_meta') | to_nice_yaml }}"
+
+# - name: register dns hosts
+#   add_host:
+#     name: "{{ item }}"
+#     groups: bind
+#     ansible_host: "{{ dns_vars.bind.hosts[item]['ansible_host']}}"
+#     ansible_user: "{{ dns_vars.bind.hosts[item]['ansible_user']}}"
+#     openstack:
+#       metadata:
+#         host_type: "{{ dns_vars.bind.hosts[item]['host_type'] }}"
+#         host_subtype: "{{ dns_vars.bind.hosts[item]['host_subtype'] }}"
+#   with_items: "{{ dns_vars.bind.hosts }}"

@@ -1,0 +1,4 @@
+---
+- include_tasks: process_dns.yaml
+  vars:
+    dns_record_state: absent

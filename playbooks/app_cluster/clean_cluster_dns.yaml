@@ -1,0 +1,19 @@
+---
+- import_playbook: ../common/read_cached_inventories.yaml
+
+# Need to be executed from the bastion host, since it's
+# not possible to update DNS servers without direct access to them (they do not have public IPs)
+- name: Register cluster instances in the DNS
+  hosts: bastions
+  environment:
+    OS_CLOUD: "{{ cloud_name }}"
+  tasks:
+    - include_role:
+        name: app_cluster
+        tasks_from: prepare_dns
+
+    - include_role:
+        name: app_cluster
+        tasks_from: depopulate_dns
+        # vars:
+          # dns_record_state: absent

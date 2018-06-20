@@ -1,8 +1,21 @@
 include "/etc/named/update.key" ;
 
-zone {{ zone }} {
-  type slave ; 
+{% for zone in zones %}
+zone {{ zones }} {
+  type slave ;
   masters { {% for ns in nameservers %} {%- if ns.name in masters -%} {{ ns.address }} ; {% endif -%} {% endfor -%} } ;
-  file "/var/named/dynamic/zone.db" ;
+  file "/var/named/dynamic/{{ zone }}.db" ;
   allow-update-forwarding { any ; } ;
 };
+
+{% endfor %}
+
+{% for zone in reverse_zones %}
+zone "{{ zone }}" {
+  type slave ;
+  masters { {% for ns in nameservers %} {%- if ns.name in masters -%} {{ ns.address }} ; {% endif -%} {% endfor -%} } ;
+  file "/var/named/dynamic/{{ zone }}.db" ;
+  allow-update-forwarding { any ; } ;
+
+};
+{% endfor %}

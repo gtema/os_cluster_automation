@@ -1,6 +1,0 @@
----
-- name: Destroy the Heat Stack
-  ignore_errors: True
-  os_stack:
-    name: "{{ dns_stack_name }}"
-    state: absent

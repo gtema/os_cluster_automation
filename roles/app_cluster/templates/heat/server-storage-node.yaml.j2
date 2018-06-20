@@ -1,0 +1,202 @@
+---
+heat_template_version: 2016-04-08
+
+description: OpenShift cluster server
+
+parameters:
+
+  name:
+    type: string
+    label: Name
+    description: Name
+
+  group:
+    type: string
+    label: Host Group
+    description: The Primary Ansible Host Group
+    default: host
+
+  cluster_env:
+    type: string
+    label: Cluster environment
+    description: Environment of the cluster
+
+  cluster_id:
+    type: string
+    label: Cluster ID
+    description: Identifier of the cluster
+
+  type:
+    type: string
+    label: Type
+    description: Type master or node
+
+  subtype:
+    type: string
+    label: Sub-type
+    description: Sub-type compute or infra for nodes, default otherwise
+    default: default
+
+  key_name:
+    type: string
+    label: Key name
+    description: Key name of keypair
+
+  image:
+    type: string
+    label: Image
+    description: Name of the image
+
+  flavor:
+    type: string
+    label: Flavor
+    description: Name of the flavor
+
+  ssh_user:
+    type: string
+    label: ssh_user
+    description: Name of the SSH user to be used for connection
+
+  net:
+    type: string
+    label: Net ID
+    description: Net resource
+
+  net_name:
+    type: string
+    label: Net name
+    description: Net name
+
+  subnet:
+    type: string
+    label: Subnet ID
+    description: Subnet resource
+
+  secgrp:
+    type: comma_delimited_list
+    label: Security groups
+    description: Security group resources
+
+  availability_zone:
+    type: string
+    description: The Availability Zone to launch the instance.
+    default: eu-de-02
+
+  availability_zones:
+    type: comma_delimited_list
+    description: List of AZs
+    default: ['eu-de-01', 'eu-de-02']
+
+  index:
+    type: number
+
+  volume_size_host:
+    type: number
+    description: Sys storage size of each node
+    default: 6
+
+  volume_size_glusterfs:
+    type: number
+    description: Size of the volume to be created.
+    default: 30
+    constraints:
+      - range: { min: 1, max: 1024 }
+        description: must be between 1 and 1024 Gb.
+
+  node_labels:
+    type: json
+    description: OpenShift Node Labels
+    default: {"region": "default" }
+
+  scheduler_hints:
+    type: json
+    description: Server scheduler hints.
+    default: {}
+
+  openshift_node_group_name:
+    type: string
+    default: ''
+    description: The openshift node group name for this server.
+
+outputs:
+
+  entry:
+    description: Compact info about the instance
+    value:
+      name:  { get_param: name }
+      host_type: { get_param: type }
+      host_subtype: { get_param: subtype }
+      address: { get_attr: [ srv, private_ip ] }
+      floating_ip: { get_attr: [ srv, floating_ip ] }
+      group: { get_param: group }
+
+  name:
+    description: Name of the server
+    value: { get_attr: [ srv, name ] }
+
+  private_ip:
+    description: Private IP of the server
+    value: { get_attr: [ srv, private_ip ] }
+
+  floating_ip:
+    description: Floating IP of the server
+    value: { get_attr: [ srv, floating_ip ] }
+
+resources:
+
+  srv:
+    type: server.yaml
+    properties:
+      name:      { get_param: name }
+      key_name:  { get_param: key_name }
+      image:     { get_param: image }
+      flavor:    { get_param: flavor }
+      # Due to the "feature" we can't pass file name as parameter,
+      # since it' content will not be attached then
+      user_data_file:
+        str_replace:
+          template:
+            get_file: user-data-node
+          params:
+            __name__: { get_param: name }
+      metadata:
+        group: { get_param: group }
+        environment: { get_param: cluster_env }
+        clusterid: { get_param: cluster_id }
+        host-type: { get_param: type }
+        sub-host-type: { get_param: subtype }
+        node_labels: { get_param: node_labels }
+        ansible_user: { get_param: ssh_user }
+        openshift_node_group_name: node-config-infra
+      scheduler_hints: { get_param: scheduler_hints }
+      net: { get_param: net }
+      net_name: { get_param: net_name }
+      subnet: { get_param: subnet }
+      secgrp: { get_param: secgrp }
+      availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
+      block_device_mapping:
+        - {"volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
+        - {"device_name": "vdb", "volume_id": { get_resource: cinder_volume_gluster }, "boot_index": -1, "delete_on_termination": true}
+    depends_on:
+      - cinder_volume_os
+      - cinder_volume_gluster
+
+  #######
+  # - server volumes
+  #######
+  cinder_volume_os:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size_host }
+      availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
+      image: { get_param: image }
+      metadata:
+        purpose: os storage
+
+  cinder_volume_gluster:
+    type: OS::Cinder::Volume
+    properties:
+      size: { get_param: volume_size_glusterfs }
+      availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
+      metadata:
+        purpose: openshift_docker_storage

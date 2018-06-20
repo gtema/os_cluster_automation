@@ -1,10 +1,11 @@
 #cloud-config
 
-fqdn: {{ bastion_server_fqdn }}
+fqdn: {{ server_fqdn }}
 
 packages:
   - mc
   - ansible
+  - python3-openstackclient
 
 growpart:
 mode: auto

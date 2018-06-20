@@ -1,0 +1,90 @@
+---
+- when: module_state != 'absent'
+  block:
+    - name: create HOT stack template prefix
+      register: stack_template_pre
+      tempfile:
+        state: directory
+        prefix: otc-dns
+
+    - name: Create stack templates
+      include_tasks: generate_templates.yaml
+      when:
+        - dns_stack_state == 'present'
+        - stack_check.rc != 0
+
+    - name: Create the Heat Stack
+      os_stack:
+        name: "{{ stack_name }}"
+        template: "{{ stack_template_path }}"
+        state: present
+        parameters:
+          domain_name: "{{ domain_name }}"
+          external_network: "{{ external_network_name }}"
+          router_name: "{{ router_name }}"
+          ssh_key_name: "{{ ssh_key_name }}"
+          dns_forwarders: "{{ dns_global_forwarders }}"
+          subnet_cidr: "{{ subnet_cidr }}"
+          image: "{{ server_image }}"
+          flavor: "{{ server_flavor }}"
+
+          slave_count: "{{ slave_count }}"
+          slave_server_group_policies: "{{ slave_server_group_policies }}"
+      register: stack_output
+
+    - name: debug stack output
+      debug:
+        var: stack_output
+
+    - set_fact:
+        # Need "safe" to create an Ansible safe dictionary object.
+        stack_instances: "{{ stack_output.stack.outputs | selectattr('output_key', 'equalto', 'instances') | map(attribute='output_value') | list | first }}"
+
+    - name: debug stack output
+      debug:
+        var: stack_instances
+
+    - name: Add the master to the inventory
+      add_host:
+        name: "{{ stack_instances.master.name }}"
+        groups: dns_masters,bind
+        zone: "{{ domain_name }}"
+        domain_name: "{{ domain_name }}"
+        masters: [" {{ stack_instances.master.name }} "]
+        forwarders: "{{ dns_global_forwarders }}"
+        contact: "{{ zone_master_contact }}"
+        nameservers: "{{ [stack_instances.master] + stack_instances.slaves }}"
+        ansible_host: "{{ stack_instances.master.address }}"
+        ansible_user: "{{ server_ssh_user }}"
+        openstack:
+          metadata:
+            host-type: dns
+            sub-host-type: master
+            groups: "dns_masters, {{ 'dns.' + domain_name }}"
+
+
+    - name: Add slaves to the inventory
+      add_host:
+        name: "{{ item.name }}"
+        groups: dns_slaves,bind
+        zone: "{{ domain_name }}"
+        domain_name: "{{ domain_name }}"
+        masters: ["{{ stack_instances.master.name }}"]
+        forwarders: "{{ dns_global_forwarders }}"
+        contact: "{{ zone_master_contact }}"
+        nameservers: "{{ [stack_instances.master] + stack_instances.slaves }}"
+        ansible_host: "{{ item.address }}"
+        ansible_user: "{{ server_ssh_user }}"
+        openstack:
+          metadata:
+            host-type: dns
+            sub-host-type: slave
+            groups: "dns_slaves, {{ 'dns.' + domain_name }}"
+      with_items: "{{ stack_instances.slaves }}"
+
+    - name: wait
+      wait_for_connection:
+        timeout: 60
+
+    - name: CleanUp
+      include_tasks: cleanup.yaml

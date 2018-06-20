@@ -1,5 +1,5 @@
 ---
-heat_template_version: 2016-10-14
+heat_template_version: 2016-04-08
 
 description:
   An instance for a DNS service made up of a single master and a set of
@@ -21,12 +21,12 @@ parameters:
     description: >
       CIDR of the DNS subnetwork
 
-  cloud_network:
-    type: string
-    description: >
-      The service network that provides floating IP addresses for the nodes
-    constraints:
-    - custom_constraint: neutron.network
+  # cloud_network:
+  #   type: string
+  #   description: >
+  #     The service network that provides floating IP addresses for the nodes
+  #   constraints:
+  #   - custom_constraint: neutron.network
 
   router_name:
     type: string
@@ -127,10 +127,8 @@ resources:
       ssh_key_name: {get_param: ssh_key_name}
 
 outputs:
-  ip_address:
+  instances:
     description: The floating IP address of the DNS servers
     value:
-      master:
-        name: {get_param: master_hostname}
-        address: {get_attr: [hosts, master_ip_address]}
+      master: {get_attr: [hosts, master_entry]}
       slaves: {get_attr: [hosts, slave_entries]}

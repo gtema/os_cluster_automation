@@ -1,0 +1,157 @@
+---
+
+# - name: set paths
+#   set_fact:
+#     config_clouds: ~/.config/openstack/clouds.yaml
+#     etc_clouds: /etc/openstack/clouds.yaml
+#     pwd_clouds: clouds.yaml
+#     config_secure: ~/.config/openstack/secure.yaml
+#     etc_secure: /etc/openstack/secure.yaml
+#     pwd_secure: secure.yaml
+#
+# - name: check remote presense of ~/.config/openstack/clouds.yaml
+#   stat:
+#     path="{{config_clouds}}"
+#   register: remote_stat_config_clouds
+#
+# - name: check remote presense of ~/.config/openstack/secure.yaml
+#   stat:
+#     path="{{config_secure}}"
+#   register: remote_stat_config_secure
+#
+# - file:
+#     path: ~/.config/openstack/
+#     state: directory
+#     recurse: yes
+#     mode: 0700
+#
+# - name: check presense of ~/.config/openstack/clouds.yaml
+#   local_action: stat path="{{config_clouds}}"
+#   register: stat_config_clouds
+#   when:
+#     - remote_stat_config_clouds.stat.exists == false
+# - name: check presense of /etc/openstack/clouds.yaml
+#   local_action: stat path="{{etc_clouds}}"
+#   register: stat_etc_clouds
+#   when:
+#     - remote_stat_config_clouds.stat.exists == false
+# - name: check presense of ./clouds.yaml
+#   local_action: stat path="{{pwd_clouds}}"
+#   register: stat_pwd_clouds
+#   when:
+#     - remote_stat_config_clouds.stat.exists == false
+# - name: check presense of ~/.config/openstack/secure.yaml
+#   local_action: stat path="{{config_secure}}"
+#   register: stat_config_secure
+#   when:
+#     - remote_stat_config_secure.stat.exists == false
+# - name: check presense of /etc/openstack/secure.yaml
+#   local_action: stat path="{{etc_secure}}"
+#   register: stat_etc_secure
+#   when:
+#     - remote_stat_config_secure.stat.exists == false
+# - name: check presense of ./secure.yaml
+#   local_action: stat path="{{pwd_secure}}"
+#   register: stat_pwd_secure
+#   when:
+#     - remote_stat_config_secure.stat.exists == false
+#
+# # Try from current dir
+# - name: copy ~/clouds.yaml
+#   copy:
+#     src: "{{pwd_clouds}}"
+#     dest: "{{pwd_clouds}}"
+#     mode: 0600
+#   register: clouds_copied
+#   when:
+#     - remote_stat_config_clouds.stat.exists == false
+#     - stat_pwd_clouds.stat.exists == true
+#
+# - name: copy ~/secure.yaml
+#   copy:
+#     src: "{{pwd_secure}}"
+#     dest: "{{pwd_secure}}"
+#     mode: 0600
+#   register: secure_copied
+#   when:
+#     - remote_stat_config_secure.stat.exists == false
+#     - stat_pwd_secure.stat.exists == true
+#
+# # Try from ~/.config/openstack
+# - name: copy ~/.config/openstack/clouds.yaml
+#   copy:
+#     src: "{{config_clouds}}"
+#     dest: "{{config_clouds}}"
+#     mode: 0600
+#   register: clouds_copied
+#   when:
+#     - remote_stat_config_clouds.stat.exists == false
+#     - stat_pwd_clouds.stat.exists == false
+#     - stat_config_clouds.stat.exists == true
+#
+# - name: copy ~/.config/openstack/secure.yaml
+#   copy:
+#     src: "{{config_secure}}"
+#     dest: "{{config_secure}}"
+#     mode: 0600
+#   register: secure_copied
+#   when:
+#     - remote_stat_config_secure.stat.exists == false
+#     - stat_pwd_secure.stat.exists == false
+#     - stat_config_secure.stat.exists == true
+#
+# # Try from /etc/openstack
+# - name: copy /etc/openstack/clouds.yaml
+#   copy:
+#     src: "{{etc_clouds}}"
+#     dest: "{{etc_clouds}}"
+#     mode: 0600
+#   register: clouds_copied
+#   when:
+#     - remote_stat_config_clouds.stat.exists == false
+#     - stat_pwd_clouds.stat.exists == false
+#     - stat_config_clouds.stat.exists == false
+#     - stat_etc_clouds.stat.exists == true
+#
+# - name: copy /etc/openstack/secure.yaml
+#   copy:
+#     src: "{{etc_secure}}"
+#     dest: "{{etc_secure}}"
+#     mode: 0600
+#   register: secure_copied
+#   when:
+#     - remote_stat_config_secure.stat.exists == false
+#     - stat_pwd_secure.stat.exists == false
+#     - stat_config_secure.stat.exists == false
+#     - stat_etc_secure.stat.exists == true
+#
+# # Generate from templates
+# - name: deploy os_config_clouds
+#   template:
+#     src: clouds.yaml.j2
+#     dest: "{{config_clouds}}"
+#     owner: "{{ bastion_server_ssh_user }}"
+#     mode: 0600
+#   when:
+#     - remote_stat_config_clouds.stat.exists == false
+#     - stat_pwd_clouds.stat.exists == false
+#     - stat_config_clouds.stat.exists == false
+#     - stat_etc_clouds.stat.exists == false
+#
+# - name: deploy os_config_secure
+#   template:
+#     src: secure.yaml.j2
+#     dest: "{{config_secure}}"
+#     owner: "{{ bastion_server_ssh_user }}"
+#     mode: 0600
+#   when:
+#     - remote_stat_config_secure.stat.exists == false
+#     - stat_pwd_secure.stat.exists == false
+#     - stat_config_secure.stat.exists == false
+#     - stat_etc_secure.stat.exists == false
+#
+# - name: install openstackclient
+#   become: yes
+#   package:
+#     name: python2-openstackclient
+#     state: installed

@@ -1,4 +1,5 @@
-heat_template_version: 2016-10-14
+---
+heat_template_version: 2016-04-08
 
 description: OpenShift cluster server
 
@@ -52,7 +53,7 @@ parameters:
   availability_zone:
     type: string
     description: The Availability Zone to launch the instance.
-    default: eu-de-02
+    # default: eu-de-02
 
   scheduler_hints:
     type: json
@@ -69,13 +70,39 @@ parameters:
 
 outputs:
 
+  # entry:
+  #   value:
+  #     name:  { get_param: name }
+  #     address:
+  #       get_attr:
+  #       - server
+  #       - addresses
+  #       - { get_param: net_name }
+  #       - 0
+  #       - addr
+  #     host_type: { get_param: host_type }
+  #     host_subtype: { get_param: host_subtype }
+  #     floating_ip:
+  #       description: Floating IP of the server
+  #       value:
+  #         get_attr:
+  #           - server
+  #           - addresses
+  #           - { get_param: net_name }
+  #           - 1
+  #           - addr
+
   server:
     description: Server as a resource
     value: { get_resource: server }
 
-  port:
-    description: Port
-    value: { get_resource: port}
+  # port:
+  #   description: Port
+  #   value: { get_resource: port}
+
+  show:
+    description: Info about the server
+    value: { get_attr: [ server, show ] }
 
   name:
     description: Name of the server

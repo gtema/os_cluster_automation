@@ -1,0 +1,4 @@
+# plugin: openstack
+# only_clouds: ['otc']
+# expand_hostvars: yes
+# # groups: []

@@ -1,0 +1,49 @@
+---
+- name: Initialize used variables
+  set_fact:
+    stack_lb_ip: []
+
+- name: "Find DNS master from inventory"
+  set_fact:
+    dns_master: "{{ hostvars[item]['ansible_host'] | default(hostvars[item]['ansible_ssh_host']) }}"
+  with_items: "{{ groups['dns_masters'] }}"
+
+- name: "Output master"
+  debug:
+    msg: "DNS master IP address is {{dns_master}}"
+
+- fail:
+    msg: "Can not find dns_master in inventory"
+  when:
+   - dns_master is not defined
+
+- name: Find LB IP
+  set_fact:
+    stack_lb_ip: "{{ stack_lb_ip + [(hostvars[item]['ansible_host'] | default(hostvars[item]['ansible_ssh_host']))] }}"
+  with_items: "{{ groups[('lb.' + stack_name)] }}"
+
+- fail:
+    msg: "Can not find stack_lb_ip in inventory"
+  when:
+   - stack_lb_ip is not defined
+
+- name: make all group
+  add_host:
+    name: "{{ item }}"
+    groups: g_all_hosts
+  with_items: "{{ groups[('masters.' + stack_name)] | union(groups[('infra.' + stack_name)]) | union(groups[('nodes.' + stack_name)])}}"
+
+- name: debug lb_ip
+  debug:
+    var: stack_lb_ip
+
+- name: Generate DNS records
+  include_tasks: generate-dns.yaml
+
+- name: debug ns direct records
+  debug:
+    var: openstack_dns_records
+
+- name: debug ns PTR records
+  debug:
+    var: openstack_reverse_dns_records

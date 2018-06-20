@@ -1,0 +1,13 @@
+$ORIGIN {{ item }}.
+$TTL 300
+@	IN SOA	{{ nameservers[0].name }}. {{ contact }}	 (
+	0	         ; serial number
+	28800      ; refresh (8 hours)
+	3600       ; retry (1 hour)
+	604800     ; expire (1 week)
+	86400      ; minimum (1 day)
+	)
+
+{% for ns in nameservers %}
+	NS	{{ ns.name }}.
+{% endfor %}

@@ -1,0 +1,5 @@
+---
+- import_playbook: ./clean_cluster_dns.yaml
+- import_playbook: ./app_cluster_destroy.yaml
+- import_playbook: ./app_cluster.yaml
+- import_playbook: ./populate_cluster_dns.yaml

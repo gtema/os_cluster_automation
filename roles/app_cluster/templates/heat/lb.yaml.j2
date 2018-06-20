@@ -1,0 +1,171 @@
+# This template is include in the stack.yaml.j2 for the loadbalancer usecase
+  #######
+  # - cluster load balancer
+  #######
+  loadbalancer:
+    type: OS::Neutron::LBaaS::LoadBalancer
+    properties:
+      name: { get_param: lb_name }
+      description: Master load-balancer
+      vip_subnet: { get_attr: [network, service_subnet] }
+    depends_on:
+      - network
+
+  #######
+  # - load balancer listeners
+  #######
+  lb_listener_router_80:
+    type: OS::Neutron::LBaaS::Listener
+    properties:
+      name: lsnr-router-80
+      loadbalancer: { get_resource: loadbalancer }
+      protocol: TCP
+      protocol_port: 80
+    depends_on: loadbalancer
+
+  lb_listener_router_443:
+    type: OS::Neutron::LBaaS::Listener
+    properties:
+      name: lsnr-router-443
+      loadbalancer: { get_resource: loadbalancer }
+      protocol: TCP
+      protocol_port: 443
+    depends_on: loadbalancer
+
+  lb_listener_admin:
+    type: OS::Neutron::LBaaS::Listener
+    properties:
+      name: lsnr-admin-8443
+      loadbalancer: { get_resource: loadbalancer }
+      protocol: TCP
+      protocol_port: 8443
+    depends_on: loadbalancer
+
+  #######
+  # - load balancer pools
+  #######
+  lb_pool_router_80:
+    type: OS::Neutron::LBaaS::Pool
+    properties:
+      lb_algorithm: ROUND_ROBIN
+      protocol: TCP
+      listener: { get_resource: lb_listener_router_80 }
+      session_persistence: {"type": "SOURCE_IP"}
+    depends_on: lb_listener_router_80
+
+  lb_pool_router_443:
+    type: OS::Neutron::LBaaS::Pool
+    properties:
+      lb_algorithm: ROUND_ROBIN
+      protocol: TCP
+      listener: { get_resource: lb_listener_router_443 }
+      session_persistence: {"type": "SOURCE_IP"}
+    depends_on: lb_listener_router_443
+
+  lb_pool_admin_8443:
+    type: OS::Neutron::LBaaS::Pool
+    properties:
+      lb_algorithm: ROUND_ROBIN
+      protocol: TCP
+      listener: { get_resource: lb_listener_admin }
+      session_persistence: {"type": "SOURCE_IP"}
+    depends_on: lb_listener_admin
+
+  #######
+  # - load balancer health monitors
+  #######
+  lb_pool_router_80_monitor:
+    type: OS::Neutron::LBaaS::HealthMonitor
+    properties:
+      type: TCP
+      delay: 5
+      max_retries: 5
+      timeout: 5
+      pool: { get_resource: lb_pool_router_80 }
+
+  lb_pool_router_443_monitor:
+    type: OS::Neutron::LBaaS::HealthMonitor
+    properties:
+      type: TCP
+      delay: 5
+      max_retries: 5
+      timeout: 5
+      pool: { get_resource: lb_pool_router_443 }
+
+  lb_pool_admin_monitor:
+    type: OS::Neutron::LBaaS::HealthMonitor
+    properties:
+      type: TCP
+      delay: 5
+      max_retries: 3
+      timeout: 10
+      pool: { get_resource: lb_pool_admin_8443 }
+
+  #######
+  # - register master nodes in the load balancer (pool members)
+  #######
+  reg_lb_masters:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count_master }
+      resource_def:
+        type: server-lb_backend.yaml
+        properties:
+          # Note you have to pass the index and the entire list into the
+          # nested template, resolving via %index% doesn't work directly
+          # in the get_param here
+          index: "%index%"
+          servers: { get_attr: [ masters, private_ip ] }
+          subnet:  { get_attr: [ network, service_subnet ] }
+          lb_pool: { get_resource: lb_pool_admin_8443 }
+          lb_port: 8443
+    depends_on:
+      - network
+      - masters
+      - loadbalancer
+
+  #######
+  # - register infra nodes in the load balancer (pod:80)
+  #######
+  reg_lb_router_80:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count_infra }
+      resource_def:
+        type: server-lb_backend.yaml
+        properties:
+          # Note you have to pass the index and the entire list into the
+          # nested template, resolving via %index% doesn't work directly
+          # in the get_param here
+          index: "%index%"
+          servers: { get_attr: [ infra_nodes, private_ip ] }
+          subnet:  { get_attr: [ network, service_subnet ] }
+          lb_pool: { get_resource: lb_pool_router_80 }
+          lb_port: 80
+    depends_on:
+      - network
+      - infra_nodes
+      - loadbalancer
+
+  #######
+  # - register master nodes in the load balancer (pod:443)
+  #######
+  reg_lb_router_8443:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count_infra }
+      resource_def:
+        type: server-lb_backend.yaml
+        properties:
+          # Note you have to pass the index and the entire list into the
+          # nested template, resolving via %index% doesn't work directly
+          # in the get_param here
+          index: "%index%"
+          servers: { get_attr: [ infra_nodes, private_ip ] }
+          subnet:  { get_attr: [ network, service_subnet ] }
+          lb_pool: { get_resource: lb_pool_router_443 }
+          lb_port: 443
+    depends_on:
+      - network
+      - infra_nodes
+      - loadbalancer

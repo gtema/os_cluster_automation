@@ -1,0 +1,52 @@
+---
+- name: Load cached inventory data
+  hosts: localhost
+  environment:
+    OS_CLOUD: "{{ cloud_name }}"
+  tasks:
+    - include_tasks: ../common/read_cached_hostvars.yaml
+      vars:
+        cache_file: "{{ bastions_group_cache_file }}"
+        cache_container: "bastions_vars"
+
+    - include_tasks: ../common/read_cached_hostvars.yaml
+      vars:
+        cache_file: "{{ app_cluster_cache_file }}"
+        cache_container: "app_cluster_vars"
+
+    - include_tasks: ../common/read_cached_hostvars.yaml
+      vars:
+        cache_file: "{{ dns_group_cache_file }}"
+        cache_container: "dns_vars"
+
+    - name: register bastion hosts
+      add_host:
+        name: "{{ item }}"
+        groups: "bastions"
+        ansible_host: "{{ bastions_vars.bastions.hosts[item]['ansible_host']}}"
+        ansible_user: "{{ bastions_vars.bastions.hosts[item]['ansible_user']}}"
+        openstack:
+          metadata:
+            host_type: "{{ bastions_vars.bastions.hosts[item]['host_type'] }}"
+            host_subtype: "{{ bastions_vars.bastions.hosts[item]['host_subtype'] }}"
+      with_items: "{{ bastions_vars.bastions.hosts }}"
+
+    - name: register dns hosts
+      add_host:
+        name: "{{ item }}"
+        groups: "bind, {{ dns_vars.bind.hosts[item]['openstack']['metadata']['groups'] | default(omit) }}"
+        ansible_host: "{{ dns_vars.bind.hosts[item]['ansible_host']}}"
+        ansible_user: "{{ dns_vars.bind.hosts[item]['ansible_user']}}"
+        openstack: "{{ dns_vars.bind.hosts[item]['openstack'] }}"
+      with_items: "{{ dns_vars.bind.hosts }}"
+
+    - name: register app_cluster hosts
+      add_host:
+        name: "{{ item }}"
+        groups:
+          - app_cluster
+          - "{{ app_cluster_vars.app_cluster.hosts[item]['openstack']['metadata']['group'] | default(omit) }}"
+        ansible_host: "{{ app_cluster_vars.app_cluster.hosts[item]['ansible_host'] | default(omit) }}"
+        ansible_user: "{{ app_cluster_vars.app_cluster.hosts[item]['ansible_user'] | default(omit) }}"
+        openstack: "{{ app_cluster_vars.app_cluster.hosts[item]['openstack'] }}"
+      with_items: "{{ app_cluster_vars.app_cluster.hosts }}"

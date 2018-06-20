@@ -1,4 +1,5 @@
-heat_template_version: 2016-10-14
+---
+heat_template_version: 2016-04-08
 
 description: OpenShift cluster server
 
@@ -46,6 +47,11 @@ parameters:
     label: Image
     description: Name of the image
 
+  ssh_user:
+    type: string
+    label: ssh_user
+    description: Name of the SSH user to be used for connection
+
   flavor:
     type: string
     label: Flavor
@@ -75,6 +81,14 @@ parameters:
     type: string
     description: The Availability Zone to launch the instance.
     default: eu-de-02
+
+  availability_zones:
+    type: comma_delimited_list
+    description: List of AZs
+    default: ['eu-de-01', 'eu-de-02']
+
+  index:
+    type: number
 
   volume_size_host:
     type: number
@@ -109,6 +123,15 @@ parameters:
 
 outputs:
 
+  entry:
+    value:
+      name:  { get_param: name }
+      host_type: { get_param: type }
+      host_subtype: { get_param: subtype }
+      address: { get_attr: [ srv, private_ip ] }
+      floating_ip: { get_attr: [ srv, floating_ip ] }
+      group: { get_param: group }
+
   name:
     description: Name of the server
     value: { get_attr: [ srv, name ] }
@@ -140,19 +163,25 @@ resources:
             __name__: { get_param: name }
       metadata:
         group: { get_param: group }
-        cluster_env: { get_param: cluster_env }
-        cluster_id: { get_param: cluster_id }
-        host_type: { get_param: type }
-        host_subtype: { get_param: subtype }
+        environment: { get_param: cluster_env }
+        clusterid: { get_param: cluster_id }
+        host-type: { get_param: type }
+        sub-host-type: { get_param: subtype }
         node_labels: { get_param: node_labels }
-        scheduler_hints: { get_param: scheduler_hints }
-        ansible_user: {{ app_server_ssh_user }}
+        ansible_user: { get_param: ssh_user }
+        openshift_node_group_name: node-config-compute
+      scheduler_hints: { get_param: scheduler_hints }
+      availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
+      # Yaql can be used only after Newton
+      # availability_zone:
+      #   yaql:
+      #     expression: $.data.availability_zones[int($.data.index) mod $.data.availability_zones.len()]
       net: { get_param: net }
       net_name: { get_param: net_name }
       subnet: { get_param: subnet }
       secgrp: { get_param: secgrp }
       block_device_mapping:
-        - {"device_name": "vda", "volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
+        - {"volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
         - {"device_name": "vdb", "volume_id": { get_resource: cinder_volume_docker }, "boot_index": -1, "delete_on_termination": true}
         - {"device_name": "vdc", "volume_id": { get_resource: cinder_volume_local }, "boot_index": -1, "delete_on_termination": true}
     depends_on:
@@ -167,7 +196,7 @@ resources:
     type: OS::Cinder::Volume
     properties:
       size: { get_param: volume_size_host }
-      availability_zone: { get_param: availability_zone }
+      availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
       image: { get_param: image }
       metadata:
         purpose: os storage
@@ -176,7 +205,7 @@ resources:
     type: OS::Cinder::Volume
     properties:
       size: { get_param: volume_size_local }
-      availability_zone: { get_param: availability_zone }
+      availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
       metadata:
         purpose: openshift_local_storage
 
@@ -184,6 +213,6 @@ resources:
     type: OS::Cinder::Volume
     properties:
       size: { get_param: volume_size_docker }
-      availability_zone: { get_param: availability_zone }
+      availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
       metadata:
         purpose: openshift_docker_storage

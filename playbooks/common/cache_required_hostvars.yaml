@@ -1,0 +1,12 @@
+---
+- name: Filter hostvars
+  set_fact:
+    filtered_hostvars: "{{ ( filtered_hostvars | default({}) ) | combine({ item.0: { item.1: (hostvars[item.0][item.1]|default()) } }, recursive=True) }}"
+  loop: "{{ groups[(group_name | mandatory )] | product(['ansible_user', 'ansible_host', 'openstack', 'host_type', 'host_subtype', 'group']) | list }}"
+
+# Persist hostvars data for reference in later playbooks. Dynamic inventory
+# cache is not efficient when too much hosts are available in single tenant
+- name: Persist bastion group
+  copy:
+    content: "{{ {group_name: {'hosts': filtered_hostvars }} | to_nice_yaml }}"
+    dest: "{{ (lookup('env', 'PWD') + '/' + (cache_file | mandatory)) }}"
