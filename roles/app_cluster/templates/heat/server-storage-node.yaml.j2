@@ -156,7 +156,7 @@ resources:
       user_data_file:
         str_replace:
           template:
-            get_file: user-data-node
+            get_file: user-data-storage
           params:
             __name__: { get_param: name }
       metadata:
@@ -199,4 +199,4 @@ resources:
       size: { get_param: volume_size_glusterfs }
       availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
       metadata:
-        purpose: openshift_docker_storage
+        purpose: openshift_gluster_storage

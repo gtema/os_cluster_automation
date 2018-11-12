@@ -1,6 +1,6 @@
-$ORIGIN {{ item }}.
+$ORIGIN .
 $TTL 300
-@	IN SOA	{{ nameservers[0].name }}	{{ contact }} (
+{{ item }}	IN SOA	{{ nameservers[0].name }}	{{ contact }} (
 	0	; serial number
 	8h	; refresh
 	1h	; retry
@@ -12,7 +12,6 @@ $TTL 300
 {% endfor %}
 
 {% if item == domain_name %}
-$ORIGIN .
 {% for ns in nameservers %}
 {{ ns.name }}	IN	A	{{ ns.address }}
 {% endfor %}

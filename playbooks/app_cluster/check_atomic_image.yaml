@@ -1,0 +1,36 @@
+---
+- name:
+  hosts: bastions
+  environment:
+    OS_CLOUD: "{{ cloud_name }}"
+  tasks:
+    - name: Try to get image facts
+      os_image_facts:
+        # cloud: "{{ cloud_name }}"
+        image: "{{ app_cluster_server_image }}"
+      register: image_result
+
+    - when: not image_result.ansible_facts.openstack_image
+      block:
+      - set_fact:
+          image_file_name: "{{app_cluster_server_image}}.x86_64.qcow2"
+
+      - name: download fedora atomic image
+        get_url:
+          url: "https://download.fedoraproject.org/pub/alt/atomic/stable/Fedora-Atomic-{{atomic_image_version}}/AtomicHost/x86_64/images/{{image_file_name}}"
+          dest: '.'
+        register: image_file
+
+      - name: upload Fedora Atomic image
+        os_image:
+          name: "{{ app_cluster_server_image }}"
+          filename: "{{ image_file.dest }}"
+          is_public: false
+          min_disk: 6
+          min_ram: 2048
+          disk_format: qcow2
+          container_format: bare
+          state: present
+          wait: no
+          verify: no
+        when: image_file.dest and image_file.size > 0

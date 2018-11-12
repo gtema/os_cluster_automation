@@ -1,0 +1,9 @@
+---
+- name: Print warning
+  debug:
+    msg: "Private key {{ keypair_private_key_dest }} will not be automatically deleted"
+
+- name: Remove KeyPair
+  os_keypair:
+    state: absent
+    name: "{{ keypair_name }}"

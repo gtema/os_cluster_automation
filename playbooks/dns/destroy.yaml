@@ -7,3 +7,8 @@
     - include_role:
         name: dns
         tasks_from: unprovision
+    # - include_role:
+    #     name: keypair
+    #     tasks_from: unprovision
+    #   vars:
+    #     keypair_name: "{{ dns_keypair_name }}"

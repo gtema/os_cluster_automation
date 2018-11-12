@@ -1,0 +1,9 @@
+---
+# Defaults for the KeyPair role
+infra_prefix: test- # This should be overridden in inventory
+
+keypair_name: "{{ (infra_prefix + 'KeyPair') }}"
+keypair_private_key_dest: "{{ private_key_file_dest | default('~/.ssh/' + keypair_name + '.pem')}}"
+
+# set this to force key deletion
+force_delete_key: false

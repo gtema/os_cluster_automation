@@ -7,3 +7,8 @@
     - include_role:
         name: bastion
         tasks_from: unprovision
+    - include_role:
+        name: keypair
+        tasks_from: unprovision
+      vars:
+        keypair_name: "{{ bastion_keypair_name }}"

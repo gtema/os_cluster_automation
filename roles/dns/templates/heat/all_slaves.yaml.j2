@@ -52,15 +52,11 @@ parameters:
     # constraints:
     # - custom_constraint: neutron.security_group
 
-  slave_server_group_policies:
-    type: comma_delimited_list
+  server_group:
+    type: string
     description: >
-      List of policies applied on master nodes ServerGroup. By default
-      'anti-affinity' policy is used to make sure that each master node
-      is deployed on a different host. If you use a small/all-in-one openstack
-      environment, you may need to disable this e.g. by passing
-      '-P master_server_group_policies=affinity'.
-    default: ['anti-affinity']
+      server group for the scheduler_hints
+    default: ''
 
   image:
     description: >
@@ -113,13 +109,13 @@ resources:
           domain_name: {get_param: domain_name}
           ssh_user: {get_param: ssh_user}
           ssh_key_name: {get_param: ssh_key_name}
-          server_group: {get_resource: slave_server_group}
+          server_group: {get_param: server_group}
 
-  slave_server_group:
-    type: OS::Nova::ServerGroup
-    properties:
-      name: slave_server_group
-      policies: {get_param: slave_server_group_policies}
+  # slave_server_group:
+  #   type: OS::Nova::ServerGroup
+  #   properties:
+  #     name: slave_server_group
+  #     policies: {get_param: slave_server_group_policies}
 
 
 outputs:

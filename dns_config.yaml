@@ -1,0 +1,11 @@
+---
+domain:
+  zone: openshift.tsi-dev.otc-service.com
+  server_type: 'bind'
+  key_name: blablabla
+  key_secret: bla_key
+  key_algorithm: hmac-md5
+  update_key: blablabla
+  server: dns_ip
+loglevel: debug
+cloud: openshift

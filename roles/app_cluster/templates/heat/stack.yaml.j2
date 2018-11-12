@@ -56,6 +56,10 @@ parameters:
     type: string
     default: s2.xlarge.2
 
+  storage_flavor:
+    type: string
+    default: s2.xlarge.2
+
   ssh_key_name:
     type: string
     description: Name of the SSH keypair registered with Nova
@@ -99,6 +103,11 @@ default: [{% for n in range(1, 20+1) %}"{{ zone_cycler.next() }}"{% if not loop.
     description: Volume size for the docker registry storage
     default: 10
 
+  volume_size_storage:
+    type: number
+    description: Volume size for the docker registry storage
+    default: 10
+
   lb_name:
     type: string
     description: name of the LoadBalancer
@@ -117,6 +126,10 @@ default: [{% for n in range(1, 20+1) %}"{{ zone_cycler.next() }}"{% if not loop.
     type: number
     default: 0
   count_cns:
+    type: number
+    default: 0
+
+  count_storage:
     type: number
     default: 0
 
@@ -151,6 +164,13 @@ resources:
     properties:
       name: infra_server_group
       policies: {{ infra_server_group_policies | to_yaml }}
+{% endif %}
+{% if storage_server_group_policies|length > 0 %}
+  storage_server_group:
+    type: OS::Nova::ServerGroup
+    properties:
+      name: storage_server_group
+      policies: {{ storage_server_group_policies | to_yaml }}
 {% endif %}
 
   #######
@@ -296,10 +316,60 @@ resources:
           volume_size_host: { get_param: volume_size_host }
           volume_size_docker: { get_param: volume_size_docker }
           volume_size_local: { get_param: volume_size_local }
-          volume_size_glusterfs: 30
+          # volume_size_glusterfs: 30
 {% if infra_server_group_policies|length > 0 %}
           scheduler_hints:
             group: { get_resource: infra_server_group }
+{% endif %}
+    depends_on:
+      - network
+
+  #######
+  # - storage nodes
+  #######
+  storage_nodes:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: count_storage }
+      resource_def:
+        type: server-storage-node.yaml
+        properties:
+          name:
+            str_replace:
+              template: sub_type_k8s_type-%index%.internal.cluster_id
+              params:
+                cluster_id: { get_param: cluster_full_dns_domain }
+                sub_type_k8s_type: storage-node
+          cluster_env: { get_param: cluster_public_dns_domain }
+          cluster_id:  {{ stack_name }}
+          group:
+            str_replace:
+              template: k8s_type.cluster_id
+              params:
+                k8s_type: storage
+                cluster_id: {{ stack_name }}
+          type:        node
+          subtype:     storage
+          node_labels:
+            region: storage
+          image:       { get_param: image_name }
+          flavor:      { get_param: infra_flavor }
+          key_name:    { get_param: ssh_key_name }
+          ssh_user:    { get_param: ssh_user }
+          availability_zones: { get_param: availability_zones }
+          index: "%index%"
+          net:         { get_attr: [network, service_network] }
+          subnet:      { get_attr: [network, service_subnet] }
+          net_name:    { get_attr: [network, service_network_name] }
+          secgrp:
+            - { get_attr: [sg, node-secgrp] }
+            - { get_attr: [sg, common-secgrp] }
+            - { get_attr: [sg, storage-secgrp] }
+          volume_size_host: { get_param: volume_size_host }
+          volume_size_glusterfs: { get_param: volume_size_storage }
+{% if storage_server_group_policies|length > 0 %}
+          scheduler_hints:
+            group: { get_resource: storage_server_group }
 {% endif %}
     depends_on:
       - network
@@ -322,6 +392,10 @@ outputs:
   infra_instances:
     description: Instances of the type Infra
     value: { get_attr: [infra_nodes, entry] }
+
+  storage_instances:
+    description: Instances of the type Storage
+    value: { get_attr: [storage_nodes, entry] }
 
   lb_instances:
     description: LoadBalancer Instances

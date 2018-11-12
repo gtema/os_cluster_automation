@@ -1,36 +1,73 @@
 ---
 - when: module_state != 'absent'
   block:
-    - name: create HOT stack template prefix
-      register: stack_template_pre
-      tempfile:
-        state: directory
-        prefix: otc-dns
 
-    - name: Create stack templates
-      include_tasks: generate_templates.yaml
-      when:
-        - dns_stack_state == 'present'
-        - stack_check.rc != 0
-
-    - name: Create the Heat Stack
-      os_stack:
-        name: "{{ stack_name }}"
-        template: "{{ stack_template_path }}"
-        state: present
-        parameters:
-          domain_name: "{{ domain_name }}"
-          external_network: "{{ external_network_name }}"
-          router_name: "{{ router_name }}"
-          ssh_key_name: "{{ ssh_key_name }}"
-          dns_forwarders: "{{ dns_global_forwarders }}"
-          subnet_cidr: "{{ subnet_cidr }}"
-          image: "{{ server_image }}"
-          flavor: "{{ server_flavor }}"
-
-          slave_count: "{{ slave_count }}"
-          slave_server_group_policies: "{{ slave_server_group_policies }}"
+    # NOTE: check the stack for existence, status and parameters
+    # If any check fails - recreate stack
+    - name: Check stack
       register: stack_output
+      os_stack_facts:
+        name: "{{ stack_name }}"
+
+    - debug:
+        var: stack_output
+
+    - set_fact:
+        stack_update_required: False
+      when:
+        - force is not defined
+        - stack_output.stack
+        - stack_output.stack.status | default('') == 'COMPLETE'
+        - stack_output.stack.parameters.domain_name | default('') == domain_name
+        - stack_output.stack.parameters.external_network | default('') == external_network_name
+        - stack_output.stack.parameters.router_name | default('') == router_name
+        - stack_output.stack.parameters.ssh_key_name | default('') == keypair_name
+        - stack_output.stack.parameters.subnet_cidr | default('') == subnet_cidr
+        - stack_output.stack.parameters.image | default('') == server_image
+        - stack_output.stack.parameters.flavor | default('') == server_flavor
+        - stack_output.stack.parameters.slave_count | default('') == slave_count
+        - (stack_output.stack.parameters.dns_forwarders | default('') | from_yaml) == dns_global_forwarders
+        - (stack_output.stack.parameters.slave_server_group_policies | default('') | from_yaml) == slave_server_group_policies
+
+    - block:
+      - name: create HOT stack template prefix
+        register: stack_template_pre
+        tempfile:
+          state: directory
+          prefix: otc-dns
+
+      - name: Create stack templates
+        include_tasks: generate_templates.yaml
+
+      - name: Create the Heat Stack
+        os_stack:
+          name: "{{ stack_name }}"
+          template: "{{ stack_template_path }}"
+          state: present
+          parameters:
+            domain_name: "{{ domain_name }}"
+            external_network: "{{ external_network_name }}"
+            router_name: "{{ router_name }}"
+            ssh_key_name: "{{ keypair_name }}"
+            dns_forwarders: "{{ dns_global_forwarders }}"
+            subnet_cidr: "{{ subnet_cidr }}"
+            image: "{{ server_image }}"
+            flavor: "{{ server_flavor }}"
+
+            slave_count: "{{ slave_count }}"
+            slave_server_group_policies: "{{ slave_server_group_policies }}"
+        register: create_stack_output
+
+      # NOTE: should be done separately, since "register" redefines variable
+      # even when not executed due to the condition
+      - set_fact:
+          stack_output: "{{create_stack_output}}"
+
+      always:
+        - name: CleanUp
+          include_tasks: cleanup.yaml
+
+      when: stack_update_required
 
     - name: debug stack output
       debug:
@@ -40,9 +77,23 @@
         # Need "safe" to create an Ansible safe dictionary object.
         stack_instances: "{{ stack_output.stack.outputs | selectattr('output_key', 'equalto', 'instances') | map(attribute='output_value') | list | first }}"
 
-    - name: debug stack output
+    - name: debug stack instances
       debug:
         var: stack_instances
+
+    # Wait for the server to really start and become accessible
+    - name: Check connectivity to the master server
+      wait_for:
+        port: 22
+        host: "{{ stack_instances.master.address }}"
+        timeout: 300
+
+    - name: Check connectivity to the slave servers
+      wait_for:
+        port: 22
+        host: "{{ item.address }}"
+        timeout: 300
+      with_items: "{{ stack_instances.slaves }}"
 
     - name: Add the master to the inventory
       add_host:
@@ -56,6 +107,7 @@
         nameservers: "{{ [stack_instances.master] + stack_instances.slaves }}"
         ansible_host: "{{ stack_instances.master.address }}"
         ansible_user: "{{ server_ssh_user }}"
+        ansible_ssh_private_key_file: "{{ ('~/.ssh/' + keypair_name + '.pem') }}"
         openstack:
           metadata:
             host-type: dns
@@ -75,16 +127,10 @@
         nameservers: "{{ [stack_instances.master] + stack_instances.slaves }}"
         ansible_host: "{{ item.address }}"
         ansible_user: "{{ server_ssh_user }}"
+        ansible_ssh_private_key_file: "{{ ('~/.ssh/' + keypair_name + '.pem') }}"
         openstack:
           metadata:
             host-type: dns
             sub-host-type: slave
             groups: "dns_slaves, {{ 'dns.' + domain_name }}"
       with_items: "{{ stack_instances.slaves }}"
-
-    - name: wait
-      wait_for_connection:
-        timeout: 60
-
-    - name: CleanUp
-      include_tasks: cleanup.yaml

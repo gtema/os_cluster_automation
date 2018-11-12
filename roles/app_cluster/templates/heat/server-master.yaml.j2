@@ -89,6 +89,7 @@ parameters:
 
   index:
     type: number
+    default: 0
 
   volume_size_host:
     type: number
@@ -210,7 +211,7 @@ resources:
       availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
       image: { get_param: image }
       metadata:
-        purpose: os storage
+        purpose: os_storage
 
   cinder_volume_local:
     type: OS::Cinder::Volume
@@ -235,3 +236,4 @@ resources:
       availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
       metadata:
         purpose: openshift_etcd_storage
+      volume_type: SATA

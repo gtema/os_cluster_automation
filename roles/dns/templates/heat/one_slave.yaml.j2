@@ -90,10 +90,11 @@ resources:
       user_data: {get_resource: init}
       image: {get_param: image}
       flavor: {get_param: flavor}
-      admin_user: {get_param: ssh_user}
       key_name: {get_param: ssh_key_name}
       networks:
-      - port: {get_resource: port}
+        - subnet: {get_param: service_subnet}
+      security_groups:
+        - {get_param: security_group}
       scheduler_hints:
         group: {get_param: server_group}
       metadata:
@@ -106,16 +107,6 @@ resources:
         host-type: dns
         sub-host-type: slave
         ansible_user: { get_param: ssh_user }
-
-  port:
-    type: OS::Neutron::Port
-    properties:
-      security_groups:
-      - {get_param: security_group}
-      network: {get_param: service_network}
-      fixed_ips:
-      - subnet: {get_param: service_subnet}
-      replacement_policy: AUTO
 
   # floating_ip:
   #   type: OS::Neutron::FloatingIP

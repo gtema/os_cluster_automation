@@ -6,8 +6,9 @@ domain_name: example.com # This also should be overridden in inventory
 module_state: present
 
 stack_name: "{{ dns_stack_name | default(infra_prefix + 'dns-stack') }}"
+stack_update_required: true
 subnet_cidr: "{{ dns_subnet_cidr | default('192.168.178.0/24') }}"
-dns_global_forwarders: "{{ dns_forwarders | default(['8.8.8.8', '8.8.4.4'])}}"
+dns_global_forwarders: "{{ dns_forwarders | default(['100.125.4.25', '8.8.8.8'])}}"
 server_flavor: "{{ dns_server_flavor | default('s2.medium.1')}}"
 server_image: "{{ dns_server_image | default('Standard_CentOS_7_latest') }}"
 server_ssh_user: "{{ dns_server_ssh_user | default('linux') }}"
@@ -15,11 +16,13 @@ slave_count : "{{ dns_slave_count | default(2) }}"
 slave_server_group_policies: "{{ dns_slave_server_group_policies | default(['anti-affinity'])}}"
 zone_master_contact: "{{ dns_contact | default('admin@' + domain_name)}}"
 
-additional_zones: "{{ dns_additional_zones | default([]) }}"
-reverse_zones:
-  "{{ dns_additional_reverse_zones | default([])}}"
-
-zones: "{{ additional_zones + [ domain_name] }}"
+authoritative_zones: "{{ dns_authoritative_zones | default([]) }}"
+reverse_zones: "{{ dns_reverse_zones | default([]) }}"
+# additional_zones: "{{ dns_additional_zones | default([]) }}"
+# reverse_zones:
+#   "{{ dns_additional_reverse_zones | default([])}}"
+#
+# zones: "{{ additional_zones + [ domain_name] }}"
 
 external_network_name: admin_external_net
 
@@ -28,7 +31,7 @@ router_name_suffix: otc-vpc-router
 network_name: "{{ (infra_prefix + network_name_suffix) }}"
 router_name: "{{ (infra_prefix + router_name_suffix) }}"
 
-ssh_key_name: "{{ (infra_prefix + '-KeyPair')}}"
+keypair_name: "{{ dns_keypair_name | default(infra_prefix + 'dns-KeyPair')}}"
 
 # NOTE: YOU MUST OVERRIDE THIS!
 # Can be generated with:

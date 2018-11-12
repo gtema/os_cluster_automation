@@ -4,19 +4,28 @@
   environment:
     OS_CLOUD: "{{ cloud_name }}"
   tasks:
+    # - include_role:
+    #     name: keypair
+    #   vars:
+    #     keypair_name: "{{ dns_keypair_name }}"
     - include_role:
         name: dns
 
-    - include_tasks: ../common/cache_required_hostvars.yaml
-      vars:
-        group_name: "bind"
-        cache_file: "{{ dns_group_cache_file | default('/tmp/ansible_group_bind_cache.tmp') }}"
+    # - include_tasks: ../common/cache_required_hostvars.yaml
+    #   vars:
+    #     group_name: "bind"
+    #     cache_file: "{{ dns_group_cache_file | default('/tmp/ansible_group_bind_cache.tmp') }}"
 
 
 - name: register RHE
   hosts: all
   become: true
   tasks:
+    # First wait for connection, since they might not have booted yet
+    - name: wait
+      wait_for_connection:
+        timeout: 60
+
     - name: Install Satellite CA certificate
       yum:
         name: "http://{{ rhsm_satellite }}/pub/katello-ca-consumer-latest.noarch.rpm"
@@ -49,7 +58,7 @@
         org_id: "{{ rhsm_org_id|default(None) }}"
       when: rhn_username|default and rhn_password|default and rhn_pool|default
 
-- import_playbook: ../common/read_cached_inventories.yaml
+# - import_playbook: ../common/read_cached_inventories.yaml
 
 - name: Prepare Bind
   hosts: bind

@@ -4,17 +4,17 @@
 - name: Create Router
   os_router:
     name: "{{ router_name }}"
-    state: "{{ net_module_state }}"
+    state: "{{ module_state }}"
     network: "{{ external_network_name }}"
     enable_snat: True
     interfaces:
       - net: "{{ network_name }}"
         subnet: "{{ subnet_name }}"
   register: net_router
-  when: net_module_state != 'absent'
+  when: module_state != 'absent'
 
 - name: Delete Router
   os_router:
     name: "{{ router_name }}"
-    state: absent
-  when: net_module_state == 'absent'
+    state: "{{ module_state }}"
+  when: module_state == 'absent'

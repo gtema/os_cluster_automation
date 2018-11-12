@@ -5,34 +5,46 @@
     OS_CLOUD: "{{ cloud_name }}"
   tasks:
     - include_role:
+        name: keypair
+      vars:
+        keypair_name: "{{ bastion_keypair_name }}"
+    - include_role:
         name: bastion
 
-    - include_tasks: ../common/cache_required_hostvars.yaml
-      vars:
-        group_name: "bastions"
-        cache_file: "{{ bastions_group_cache_file | default('/tmp/ansible_group_bastions_cache.yaml') }}"
+    # - include_tasks: ../common/cache_required_hostvars.yaml
+    #   vars:
+    #     group_name: "bastion"
+    #     cache_file: "{{ bastions_group_cache_file | default('/tmp/ansible_group_bastions_cache.yaml') }}"
 
 
-# - name: Provision Bastion
-#   hosts: bastions
-#   become: true
-#   tasks:
-#     - include_role:
-#         name: bastion
-#         tasks_from: install.yaml
+- name: Provision Bastion
+  hosts: bastions
+  become: true
+  tasks:
+    # Apply common role to bastion
+    - include_role:
+        name: server_common
 
-# - name: Deploy OpenStack client configuration
-#   hosts: localhost
-#   environment:
-#     OS_CLOUD: "{{ cloud_name }}"
-#   tasks:
-#     - include_role:
-#         name: bastion
-#         tasks_from: os_client_config.yaml
+    # Provision special stuff for bastion
+    - include_role:
+        name: bastion
+        tasks_from: install.yaml
 
 - name: message
   hosts: localhost
   tasks:
     - name: print notice
       debug:
-        msg: "Configure your SSH to have bastion {{ groups.bastions[0] }} be used as a proxy to other subnets"
+        msg: |
+          Configure your SSH to have bastion {{ groups.bastions[0] }}
+          ({{ hostvars[groups.bastions[0]]['ansible_host'] }}) be used as
+          a proxy to other subnets. Add to the ~/.ssh/config:
+
+          ```
+            Host {{ groups.bastions[0] }}
+            HostName {{ hostvars[groups.bastions[0]]['ansible_host'] }}
+            User {{ hostvars[groups.bastions[0]]['ansible_user'] }}
+            IdentityFile {{ hostvars[groups.bastions[0]]['ansible_ssh_private_key_file'] }}
+            ControlMaster auto
+            ControlPersist 5m
+          ```

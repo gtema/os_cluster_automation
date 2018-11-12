@@ -30,7 +30,7 @@
   template:
     src: templates/bind/zone.db.j2
     dest: "{{ '/var/named/dynamic/' + item + '.db' }}"
-  with_items: "{{ zones }}"
+  with_items: "{{ authoritative_zones }}"
   tags:
     - zonedata
   notify:

@@ -8,17 +8,18 @@
         name: "{{ server_fqdn }}"
         image: "{{ server_image }}"
         flavor: "{{ server_flavor }}"
-        key_name: "{{ ssh_key_name }}"
+        key_name: "{{ server_keypair_name }}"
         boot_from_volume: true
-        volume_size: 10
+        volume_size: "{{ server_volume_size }}"
         network: "{{ server_net }}"
         security_groups: "{{ security_group }}"
         terminate_volume: true
         userdata: "{{ lookup('template', './user-data.j2') }}"
-        meta: "group={{ server_fqdn }},host-type=bastion,ansible_user={{ server_ssh_user }}"
+        meta: "group=bastion,groups={{ domain_name }},host-type=bastion,ansible_user={{ server_ssh_user }}"
       register: bastion_server
 
-    # unfortunately it is not working to assign floating_ip, since server is busy when trying to assign IP
+    # unfortunately it is not working to assign floating_ip, since server
+    # is busy when trying to assign IP
     # TODO(gtema) - analyse openstacksdk and potentially check server state
     - os_floating_ip:
         server: "{{ server_fqdn }}"
@@ -62,6 +63,7 @@
         hostname: "{{ server_fqdn }}"
         ansible_host: "{{ bastion_interface_ip }}"
         ansible_user: "{{ server_ssh_user }}"
+        ansible_ssh_private_key_file: "{{ ('~/.ssh/' + server_keypair_name + '.pem') }}"
         groups: bastions
 
 - when: module_state == 'absent'

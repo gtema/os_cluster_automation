@@ -1,0 +1,60 @@
+cloud_name: zuul_ci
+
+infra_prefix: zuul-
+
+# Those can't remain in the network_infra role, since all other roles need those vars
+# network_name_suffix: otc-net
+
+# Those are used in all roles
+router_name_suffix: otc-vpc-router
+router_name: "{{ (infra_prefix + router_name_suffix) }}"
+
+
+domain_name: zuul.tsi-dev.otc-service.com
+
+# bastion_assign_public_ip: false
+bastion_image: Standard_Fedora_28_latest
+bastion_server_ssh_user: linux
+
+ansible_remote_user: "{{ (bastion_server_ssh_user | default(linux)) }}"
+ansible_ssh_private_key_file: "{{ ('~/.ssh/' + (ssh_key_name | default(infra_prefix + 'KeyPair')) + '.pem' )}}"
+# ssh_key_name: ag-KeyPair
+# ansible_ssh_private_key_file: /home/gtema/.ssh/ag-KeyPair.pem
+
+
+dns_slave_count: 1
+
+# NOTE: YOU MUST CHANGE THIS!
+# Can be generated with:
+#     ddns-confgen -r /dev/urandom
+# or:
+#     rndc-confgen -a -c update.key -k update-key -r /dev/urandom
+dns_update_key: "2aiRQ0suQXtM77hmpVuom5hSQ+IQX2TWOjNEd4Kt2Mc="
+
+dns_nsupdate_keys:
+ # public:
+ #   key_secret: 'SKqKNdpfk7llKxZ57bbxUnUDobaaJp9t8CjXLJPl+fRI5mPcSBuxTAyvJPa6Y9R7vUg9DwCy/6WTpgLNqnV4Hg=='
+ #   key_algorithm: 'hmac-md5'
+ #   server: '192.168.1.1'
+ private:
+   key_secret: "{{ dns_update_key }}"
+   key_name: "update-key"
+   key_algorithm: 'hmac-md5'
+
+# dns_additional_zones:
+#   - tsi-dev.otc-service.com
+# dns_additional_reverse_zones:
+#   - 99.168.192.in-addr.arpa
+
+app_cluster_compute_nodes: 3
+app_cluster_infra_nodes: 3
+app_cluster_master_nodes: 2
+
+app_cluster_id: openshift
+app_cluster_public_dns_domain: tsi-dev.otc-service.com
+app_cluster_app_subdomain: apps.openshift
+
+
+bastions_group_cache_file: .ansible_group_bastions_cache.yaml
+dns_group_cache_file: .ansible_group_bind_cache.yaml
+app_cluster_cache_file: .ansible_group_app_cluster_cache.yaml

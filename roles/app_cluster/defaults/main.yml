@@ -21,10 +21,12 @@ volume_size_local: "{{ app_cluster_volume_size_local | default(30) }}"
 volume_size_etcd: "{{ app_cluster_volume_size_etcd | default(25) }}"
 volume_size_registry: "{{ app_cluster_volume_size_registry | default(30) }}"
 volume_size_host: "{{ app_cluster_volume_size_host | default(6) }}"
+volume_size_storage: "{{ app_cluster_volume_size_storage | default(40) }}"
 
 count_master_nodes: "{{ app_cluster_master_nodes | default(1) }}"
 count_infra_nodes: "{{ app_cluster_infra_nodes | default(3) }}"
 count_compute_nodes: "{{ app_cluster_compute_nodes | default(3) }}"
+count_storage_nodes: "{{ app_cluster_storage_nodes | default(0) }}"
 
 
 # Node data
@@ -33,8 +35,9 @@ subnet_cidr: "{{ app_cluster_subnet_cidr | default('192.168.99.0/24') }}"
 server_node_flavor: "{{ app_cluster_node_flavor | default('s2.large.4')}}"
 server_master_flavor: "{{ app_cluster_server_flavor | default('s2.2xlarge.4') }}"
 server_infra_flavor: "{{ app_cluster_infra_flavor | default('s2.xlarge.2') }}"
+server_storage_flavor: "{{ app_cluster_storage_flavor | default('s2.xlarge.2') }}"
 # TODO: fetch and upload image if it does not exist
-server_image: "{{ app_cluster_server_image | default('Fedora-AtomicHost-28-20180613') }}"
+server_image: "{{ app_cluster_server_image | default('Fedora-AtomicHost-29-20181025.1') }}"
 server_ssh_user: "{{ app_cluster_server_ssh_user | default('fedora') }}"
 ssh_key_name: "{{ (infra_prefix + '-KeyPair')}}"
 
@@ -53,3 +56,7 @@ master_server_group_policies:
   - anti-affinity
 infra_server_group_policies:
   - anti-affinity
+storage_server_group_policies:
+  - anti-affinity
+
+stack_update_required: True

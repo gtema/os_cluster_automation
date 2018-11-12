@@ -77,6 +77,11 @@ parameters:
     constraints:
     - custom_constraint: nova.keypair
 
+  server_group:
+    type: string
+    description: >
+      server group for the scheduler_hints
+    default: ''
 
 resources:
   # A VM to provide host based orchestration and other sub-services
@@ -89,14 +94,17 @@ resources:
           params:
             HOST: {get_param: hostname}
             DOMAIN: {get_param: domain_name}
-      admin_user: {get_param: ssh_user}
       image: {get_param: image}
       flavor: {get_param: flavor}
       key_name: {get_param: ssh_key_name}
       networks:
-      - port: {get_resource: port}
+        - subnet: {get_param: service_subnet}
+      security_groups:
+        - {get_param: security_group}
       user_data_format: SOFTWARE_CONFIG
       user_data: {get_resource: init}
+      scheduler_hints:
+        group: {get_param: server_group}
       metadata:
         groups:
           - dns_masters
@@ -107,17 +115,6 @@ resources:
         host-type: dns
         sub-host-type: master
         ansible_user: { get_param: ssh_user }
-
-
-  port:
-    type: OS::Neutron::Port
-    properties:
-      security_groups:
-      - {get_param: security_group}
-      network: {get_param: service_network}
-      fixed_ips:
-      - subnet: {get_param: service_subnet}
-      replacement_policy: AUTO
 
   # floating_ip:
   #   type: OS::Neutron::FloatingIP

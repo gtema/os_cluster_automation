@@ -111,13 +111,13 @@ parameters:
       - range: { min: 1, max: 1024 }
         description: must be between 1 and 1024 Gb.
 
-  volume_size_glusterfs:
-    type: number
-    description: Size of the volume to be created.
-    default: 30
-    constraints:
-      - range: { min: 1, max: 1024 }
-        description: must be between 1 and 1024 Gb.
+  # volume_size_glusterfs:
+  #   type: number
+  #   description: Size of the volume to be created.
+  #   default: 30
+  #   constraints:
+  #     - range: { min: 1, max: 1024 }
+  #       description: must be between 1 and 1024 Gb.
 
   node_labels:
     type: json
@@ -194,12 +194,12 @@ resources:
         - {"volume_id": { get_resource: cinder_volume_os }, "delete_on_termination": true}
         - {"device_name": "vdb", "volume_id": { get_resource: cinder_volume_docker }, "boot_index": -1, "delete_on_termination": true}
         - {"device_name": "vdc", "volume_id": { get_resource: cinder_volume_local }, "boot_index": -1, "delete_on_termination": true}
-        - {"device_name": "vdd", "volume_id": { get_resource: cinder_volume_gluster }, "boot_index": -1, "delete_on_termination": true}
+        # - {"device_name": "vdd", "volume_id": { get_resource: cinder_volume_gluster }, "boot_index": -1, "delete_on_termination": true}
     depends_on:
       - cinder_volume_os
       - cinder_volume_local
       - cinder_volume_docker
-      - cinder_volume_gluster
+      # - cinder_volume_gluster
 
   #######
   # - server volumes
@@ -229,10 +229,10 @@ resources:
       metadata:
         purpose: openshift_docker_storage
 
-  cinder_volume_gluster:
-    type: OS::Cinder::Volume
-    properties:
-      size: { get_param: volume_size_glusterfs }
-      availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
-      metadata:
-        purpose: openshift_docker_storage
+  # cinder_volume_gluster:
+  #   type: OS::Cinder::Volume
+  #   properties:
+  #     size: { get_param: volume_size_glusterfs }
+  #     availability_zone: { get_param: [ availability_zones, { get_param: index } ] }
+  #     metadata:
+  #       purpose: openshift_docker_storage

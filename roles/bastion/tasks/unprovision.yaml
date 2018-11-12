@@ -6,4 +6,4 @@
     loop_var: task
   with_items:
     - bastion
-    # - sec_group
+    - sec_group

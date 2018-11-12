@@ -16,8 +16,11 @@ domain_name: example.com
 bastion_image: Fedora-Cloud-Base-28-1.1
 bastion_server_ssh_user: fedora
 
-ssh_key_name: cloud-KeyPair
-ansible_ssh_private_key_file: ~/.ssh/cloud-KeyPair.pem
+# ssh_key_name: cloud-KeyPair
+# ansible_ssh_private_key_file: ~/.ssh/cloud-KeyPair.pem
+
+ansible_remote_user: "{{ (bastion_server_ssh_user | default(linux)) }}"
+ansible_ssh_private_key_file: "{{ ('~/.ssh/' + (ssh_key_name | default(infra_prefix + 'KeyPair')) + '.pem' )}}"
 
 
 dns_slave_count: 1

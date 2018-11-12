@@ -8,9 +8,11 @@
     server_node_template_path: "{{ stack_template_pre.path }}/server-node.yaml"
     server_infra_node_template_path: "{{ stack_template_pre.path }}/server-infra-node.yaml"
     server_master_template_path: "{{ stack_template_pre.path }}/server-master.yaml"
+    server_storage_template_path: "{{ stack_template_pre.path }}/server-storage-node.yaml"
     server_lb_backend_template_path: "{{ stack_template_pre.path }}/server-lb_backend.yaml"
     user_data_node_template_path: "{{ stack_template_pre.path }}/user-data-node"
     user_data_master_template_path: "{{ stack_template_pre.path }}/user-data-master"
+    user_data_storage_template_path: "{{ stack_template_pre.path }}/user-data-storage"
 
 - name: Print out the Heat template directory
   debug: var=stack_template_pre
@@ -50,6 +52,11 @@
     src: heat/server-master.yaml.j2
     dest: "{{ server_master_template_path }}"
 
+- name: generate HOT stack server storage node template from jinja2 template
+  template:
+    src: heat/server-storage-node.yaml.j2
+    dest: "{{ server_storage_template_path }}"
+
 - name: generate HOT stack server master node template from jinja2 template
   template:
     src: heat/server-lb_backend.yaml.j2
@@ -64,3 +71,8 @@
   template:
     src: user-data-master.j2
     dest: "{{ user_data_master_template_path }}"
+
+- name: generate HOT stack server master node user-data template from jinja2 template
+  template:
+    src: user-data-storage.j2
+    dest: "{{ user_data_storage_template_path }}"

@@ -27,4 +27,3 @@
       os_security_group:
         state: "{{ module_state }}"
         name: "{{ security_group }}"
-        description: Security group for the bastion host
