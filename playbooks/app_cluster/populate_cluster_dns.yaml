@@ -6,12 +6,12 @@
 - name: Register cluster instances in the DNS
   hosts: bastions
   environment:
-    OS_CLOUD: "{{ cloud_name }}"
+    OS_CLOUD: OS_CLOUD: "{{ lookup('env', 'OS_CLOUD') | default(cloud_name) }}"
   tasks:
     - include_role:
         name: app_cluster
         tasks_from: prepare_dns
-    
+
     - include_role:
         name: app_cluster
         tasks_from: process_dns

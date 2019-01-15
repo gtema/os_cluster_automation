@@ -18,8 +18,6 @@ bastion_server_ssh_user: linux
 
 ansible_remote_user: "{{ (bastion_server_ssh_user | default(linux)) }}"
 ansible_ssh_private_key_file: "{{ ('~/.ssh/' + (ssh_key_name | default(infra_prefix + 'KeyPair')) + '.pem' )}}"
-# ssh_key_name: ag-KeyPair
-# ansible_ssh_private_key_file: /home/gtema/.ssh/ag-KeyPair.pem
 
 
 dns_slave_count: 1
