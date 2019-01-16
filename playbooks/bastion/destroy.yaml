@@ -2,13 +2,13 @@
 - name: Destroy Bastion
   hosts: localhost
   environment:
-    OS_CLOUD: "{{ lookup('env', 'OS_CLOUD') | default(cloud_name) }}"
+    OS_CLOUD: "{{ cloud_name | default(omit) }}"
   tasks:
     - include_role:
         name: bastion
-        tasks_from: unprovision
+        tasks_from: desctroy
     - include_role:
         name: keypair
-        tasks_from: unprovision
+        tasks_from: destroy
       vars:
         keypair_name: "{{ bastion_keypair_name }}"
