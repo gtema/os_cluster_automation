@@ -1,8 +1,6 @@
 ---
 - name: Destroy Bastion
   hosts: localhost
-  environment:
-    OS_CLOUD: "{{ cloud_name | default(omit) }}"
   tasks:
     - include_role:
         name: bastion
