@@ -1,5 +1,3 @@
-cloud_name: otc
-
 infra_prefix: x-
 
 # Those can't remain in the network_infra role, since all other roles need those vars

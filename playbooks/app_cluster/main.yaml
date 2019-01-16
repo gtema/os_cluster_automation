@@ -1,8 +1,6 @@
 ---
 - name: Provision K8s/OpenShift infrastructure
   hosts: localhost
-  environment:
-    OS_CLOUD: "{{ lookup('env', 'OS_CLOUD') | default(cloud_name) }}"
   tasks:
     - include_role:
         name: keypair
