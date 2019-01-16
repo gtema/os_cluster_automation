@@ -10,3 +10,12 @@
       - net_network is defined
       - net_subnet is defined
       - net_router is defined
+
+- name: debug
+  debug:
+    var: net_router
+    
+- name: Assert that SNAT is enabled on the router
+  assert:
+    that:
+      - net_router.router.external_gateway_info.enable_snat
