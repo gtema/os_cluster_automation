@@ -15,6 +15,6 @@ router_name_suffix: otc-vpc-router
 network_name: "{{ (infra_prefix + network_name_suffix) }}"
 router_name: "{{ (infra_prefix + router_name_suffix) }}"
 
-subnet_name: "{{ default_subnet_name | default('default-subnet') }}"
+subnet_name: "{{ default_subnet_name | default(infra_prefix + '-default-subnet') }}"
 subnet_cidr: "{{ default_subnet_cidr | default('192.168.110.0/24') }}"
 subnet_dns_servers: "{{ default_subnet_dns_servers | default(['100.125.4.25', '8.8.8.8']) }}"
